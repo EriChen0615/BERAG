@@ -1,0 +1,157 @@
+Category: high_entropy_single_gt_correct
+Num examples: 5
+
+[Example 1]
+Question ID: 2069
+Question: What product is being spoken of?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_2069_page_2.png
+GT answer: wine
+Generated answer: Wine
+Answer word count: 1
+Prior entropy: 2.656369
+Prior Distribution:
+- page_1: logit=-2.687500, prob=0.068271
+- page_2: logit=-3.296875, prob=0.037118
+- page_3: logit=-1.507812, prob=0.222109
+- page_4: logit=-3.109375, prob=0.044773
+- page_5: logit=-3.546875, prob=0.028908
+- page_6: logit=-5.281250, prob=0.005102
+- page_7: logit=-4.062500, prob=0.017262
+- page_8: logit=-3.515625, prob=0.029825
+- page_9: logit=-3.421875, prob=0.032757
+- page_10: logit=-3.031250, prob=0.048411
+- page_11: logit=-2.281250, prob=0.102486
+- page_12: logit=-3.437500, prob=0.032249
+- page_13: logit=-3.343750, prob=0.035418
+- page_14: logit=-5.500000, prob=0.004100
+- page_15: logit=-3.812500, prob=0.022164
+- page_16: logit=-3.296875, prob=0.037118
+- page_17: logit=-2.734375, prob=0.065144
+- page_18: logit=-3.921875, prob=0.019868
+- page_19: logit=-3.234375, prob=0.039512
+- page_20: logit=-2.234375, prob=0.107405
+
+[Example 2]
+Question ID: 2070
+Question: Who is William Mougayar?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_2070_page_1.png
+GT answer: virtual capital venture
+Generated answer: Virtual Capital Ventures
+Answer word count: 3
+Prior entropy: 2.653499
+Prior Distribution:
+- page_1: logit=-1.390625, prob=0.248976
+- page_2: logit=-2.593750, prob=0.074756
+- page_3: logit=-3.796875, prob=0.022446
+- page_4: logit=-3.000000, prob=0.049798
+- page_5: logit=-4.406250, prob=0.012204
+- page_6: logit=-3.437500, prob=0.032152
+- page_7: logit=-2.359375, prob=0.094501
+- page_8: logit=-3.328125, prob=0.035868
+- page_9: logit=-3.515625, prob=0.029736
+- page_10: logit=-2.546875, prob=0.078344
+- page_11: logit=-3.390625, prob=0.033695
+- page_12: logit=-3.750000, prob=0.023523
+- page_13: logit=-2.718750, prob=0.065972
+- page_14: logit=-3.906250, prob=0.020120
+- page_15: logit=-3.500000, prob=0.030204
+- page_16: logit=-4.937500, prob=0.007174
+- page_17: logit=-3.000000, prob=0.049798
+- page_18: logit=-3.437500, prob=0.032152
+- page_19: logit=-3.500000, prob=0.030204
+- page_20: logit=-3.562500, prob=0.028374
+
+[Example 3]
+Question ID: 2176
+Question: What is the main topic of dicussion?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_2176_page_1.png
+GT answer: dental plaque
+Generated answer: Dental plaque
+Answer word count: 2
+Prior entropy: 2.535239
+Prior Distribution:
+- page_1: logit=-1.328125, prob=0.264971
+- page_2: logit=-3.140625, prob=0.043255
+- page_3: logit=-5.000000, prob=0.006738
+- page_4: logit=-3.906250, prob=0.020116
+- page_5: logit=-3.140625, prob=0.043255
+- page_6: logit=-5.062500, prob=0.006330
+- page_7: logit=-3.812500, prob=0.022093
+- page_8: logit=-2.500000, prob=0.082084
+- page_9: logit=-3.703125, prob=0.024646
+- page_10: logit=-4.281250, prob=0.013825
+- page_11: logit=-2.328125, prob=0.097477
+- page_12: logit=-3.140625, prob=0.043255
+- page_13: logit=-3.187500, prob=0.041275
+- page_14: logit=-4.031250, prob=0.017752
+- page_15: logit=-2.015625, prob=0.133236
+- page_16: logit=-4.187500, prob=0.015184
+- page_17: logit=-3.250000, prob=0.038774
+- page_18: logit=-3.468750, prob=0.031156
+- page_19: logit=-3.406250, prob=0.033165
+- page_20: logit=-3.843750, prob=0.021413
+
+[Example 4]
+Question ID: 1526
+Question: Is this frame made from metal or bone?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_1526_page_9.png
+GT answer: Metal
+Generated answer: Metal
+Answer word count: 1
+Prior entropy: 2.415749
+Prior Distribution:
+- page_1: logit=-4.062500, prob=0.017166
+- page_2: logit=-3.406250, prob=0.033088
+- page_3: logit=-5.562500, prob=0.003830
+- page_4: logit=-1.804688, prob=0.164140
+- page_5: logit=-3.625000, prob=0.026587
+- page_6: logit=-3.015625, prob=0.048900
+- page_7: logit=-3.312500, prob=0.036340
+- page_8: logit=-3.109375, prob=0.044524
+- page_9: logit=-2.984375, prob=0.050452
+- page_10: logit=-3.484375, prob=0.030601
+- page_11: logit=-5.187500, prob=0.005573
+- page_12: logit=-4.656250, prob=0.009480
+- page_13: logit=-1.757812, prob=0.172017
+- page_14: logit=-4.218750, prob=0.014683
+- page_15: logit=-4.062500, prob=0.017166
+- page_16: logit=-3.187500, prob=0.041178
+- page_17: logit=-1.406250, prob=0.244486
+- page_18: logit=-4.187500, prob=0.015149
+- page_19: logit=-4.250000, prob=0.014231
+- page_20: logit=-4.562500, prob=0.010411
+
+[Example 5]
+Question ID: 983
+Question: What is CSD an abbreviation for in this presentation?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_983_page_2.png
+GT answer: carbonated soft drink
+Generated answer: Carbonated Soft Drinks
+Answer word count: 3
+Prior entropy: 2.315518
+Prior Distribution:
+- page_1: logit=-5.750000, prob=0.003181
+- page_2: logit=-2.265625, prob=0.103708
+- page_3: logit=-2.703125, prob=0.066959
+- page_4: logit=-6.531250, prob=0.001456
+- page_5: logit=-5.687500, prob=0.003386
+- page_6: logit=-5.937500, prob=0.002637
+- page_7: logit=-3.187500, prob=0.041252
+- page_8: logit=-2.265625, prob=0.103708
+- page_9: logit=-1.390625, prob=0.248782
+- page_10: logit=-7.562500, prob=0.000519
+- page_11: logit=-4.250000, prob=0.014256
+- page_12: logit=-2.187500, prob=0.112135
+- page_13: logit=-2.421875, prob=0.088706
+- page_14: logit=-6.375000, prob=0.001703
+- page_15: logit=-2.500000, prob=0.082040
+- page_16: logit=-7.625000, prob=0.000488
+- page_17: logit=-4.656250, prob=0.009497
+- page_18: logit=-4.687500, prob=0.009205
+- page_19: logit=-2.468750, prob=0.084644
+- page_20: logit=-3.828125, prob=0.021738

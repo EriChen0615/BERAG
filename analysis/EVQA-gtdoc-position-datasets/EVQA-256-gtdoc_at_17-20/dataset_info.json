@@ -1,0 +1,125 @@
+{
+  "citation": "",
+  "description": "",
+  "features": {
+    "pos_item_ids": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "pos_item_contents": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "img_id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "img_path": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "image_id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "question_id": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "question": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "answers": {
+      "feature": {
+        "dtype": "string",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
+    },
+    "gold_answer": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "question_type": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "instruction": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "Pseudo Recall@1": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Pseudo Recall@5": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Pseudo Recall@10": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Pseudo Recall@50": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Pseudo Recall@100": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Pseudo Recall@500": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Recall@1": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Recall@5": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Recall@10": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Recall@50": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Recall@100": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "Recall@500": {
+      "dtype": "float64",
+      "_type": "Value"
+    },
+    "retrieved_passage": [
+      {
+        "passage_id": {
+          "dtype": "string",
+          "_type": "Value"
+        },
+        "score": {
+          "dtype": "float64",
+          "_type": "Value"
+        }
+      }
+    ],
+    "MRR": {
+      "dtype": "float64",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": ""
+}

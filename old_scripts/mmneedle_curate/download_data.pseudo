@@ -1,0 +1,4 @@
+DO
+    * download coco 2014 train and valid set to ../vqa_data/MSCOCO2014
+    * download mmneedle dataset from https://github.com/Wang-ML-Lab/multimodal-needle-in-a-haystack using HuggingFace to ../vqa_data/MMNeedle
+DONE

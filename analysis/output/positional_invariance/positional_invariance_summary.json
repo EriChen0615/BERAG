@@ -1,0 +1,59 @@
+{
+  "retrieval_db": "outputs/0jingbiao_mei/EVQA-testfull-with-retrieval_post_reranked",
+  "system_csv_paths": {
+    "Base": "outputs/0326/EVQA/Qwen2-VL-7B-Instruct-retrieved_passage-Top20/marked_inference_results.csv",
+    "SFT": "outputs/1125/VLLM/Qwen2-VL-2B-Instruct-7B-EVQA-VLLM-SFT-RAG-K=5-Top20-Retrieve-TakeN=0/marked_inference_results.csv",
+    "DPO": "outputs/1125/VLLM/Qwen2-VL-2B-Instruct-EVQA-VLLM-DPO-RAG-K=5-Top20-Retrieve-TakeN=0/marked_inference_results.csv",
+    "BEFT": "outputs/1125-v3/BAPE/7B-EVQA-BAPE-BEFT[K*=2]-prior=mlp_lr1e-6-l0h4-lora_r64_bs8-epoch1-K=20-h4-prior=prior_head-retrieved_passage-TakeN=0/marked_inference_results.csv"
+  },
+  "topk": 20,
+  "bins": [
+    "1-4",
+    "5-8",
+    "9-12",
+    "13-16",
+    "17-20"
+  ],
+  "retrieval_stats": {
+    "total_retrieval_examples": 3750,
+    "alias_keys_generated": 7500,
+    "missing_question_id": 0,
+    "missing_gt_pos_item_ids": 0,
+    "missing_retrieval_passage": 0,
+    "used_field_retrieval_passage": 0,
+    "used_field_retrieved_passage": 3750,
+    "used_field_reranked_passage": 0,
+    "gt_not_in_topk": 909,
+    "gt_found_in_topk": 2841
+  },
+  "per_system_summary": {
+    "Base": {
+      "rows_in_csv": 3750,
+      "rows_with_rank": 2841,
+      "rows_without_rank": 909,
+      "rows_in_bins": 2841
+    },
+    "SFT": {
+      "rows_in_csv": 3750,
+      "rows_with_rank": 2841,
+      "rows_without_rank": 909,
+      "rows_in_bins": 2841
+    },
+    "DPO": {
+      "rows_in_csv": 3750,
+      "rows_with_rank": 2841,
+      "rows_without_rank": 909,
+      "rows_in_bins": 2841
+    },
+    "BEFT": {
+      "rows_in_csv": 3750,
+      "rows_with_rank": 2841,
+      "rows_without_rank": 909,
+      "rows_in_bins": 2841
+    }
+  },
+  "output_stats_csv": "analysis/output/positional_invariance/positional_invariance_stats.csv",
+  "output_plot_png": "analysis/output/positional_invariance/positional_invariance_barplot.png",
+  "output_basediff_stats_csv": "analysis/output/positional_invariance/positional_invariance_basediff_stats.csv",
+  "output_basediff_plot_png": "analysis/output/positional_invariance/positional_invariance_barplot_basediff.png"
+}

@@ -1,0 +1,10 @@
+Answer the question about the image. You may use the retriever to retrieve relevant document from an external database using the following function calls. The function call API is as follows:
+
+- RETRIEVER_SEARCH(<query>): Call the retriever using <query>. Return a list of five document previews in the format of "[PREVIEW DOCUMENT <doc_index>] <document excerpt>".
+- RETRIEVER_VIEW(<doc_index>): Return the full text of the document labeled with index <doc_index> in the format of "[FULL DOCUMENT <doc_index>]". 
+- RETRIEVER_NEXTPAGE(): return the next five document previews under the same query.
+
+Function calls should start on a new line. You should stop generation on completion of the retriever function call and resume after the retriever returns result. You should provide the final answer to the question after "[ANSWER]". 
+
+Question: <<QUESTION>>
+Response: 

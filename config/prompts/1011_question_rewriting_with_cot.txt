@@ -1,0 +1,13 @@
+Given a question about an image, please provide 10 Knowledge-Rewrite pairs, where each pair consists of a piece of knowledge that might be needed to answer the question and a rewritten question. the rewritten question is a decontextualized version of the question by addressing coreference and omission issues with respect to each information. the resulting question should retain its original search intent.
+Your response should follow the following format:
+- Knowledge 1:
+- Rewrite 1: 
+- Knowledge 2:
+- Rewrite 2:
+...
+- Knowledge 10:
+- Rewrite 10:
+
+Question: <<QUESTION>>
+
+Response:

@@ -1,0 +1,4 @@
+Answer the question about the image in less than three words. A retriever has retrieved a relevant document for you and provided it after [EVIDENCE].
+
+Question: <<QUESTION>>
+Response:

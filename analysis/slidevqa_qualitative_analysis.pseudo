@@ -1,0 +1,33 @@
+GOAL
+    * Perform qualitative analysis on SlideVQA to understand
+        * (1) how the model handles questions requiring multiple slides to answer
+        * (2) how the model generate relative long (> 3 tokens) and visualize the posterior distribution
+
+CONTEXT
+    * The inference file for SlideVQA is under `outputs/1225/BAPE/SlideVQA/SlideVQA-BAPE-BEFT[K=4*]-prior=mlp-lr1e-6-l1h4-r64-epoch1-h4-prior=prior_head-K=20-TakeN=0/marked_inference_results.csv`
+    * There's a multi-GT analysis script under `analysis/slidevqa_multigt_analysis.py`
+
+DO 
+    * For each of the category below, identify 5 instances in the SlideVQA test set 
+        * (1) Long answer. Rank the answers from long to short by number of space-delimited words. Don't use tokenizer.
+        * (2) Multi-GT & Model answer correctly.
+        * (3) High Prior Entropy & Single GT & Model answer correctly.
+        * (4) High Prior Entropy & Multi GT & Model answer correctly.
+    * Print a text report in the following format
+        * Question ID: <>
+        * Question: <>
+        * GT Slide Images: 
+            - <path1>
+            - <path2>
+        * GT answer: 
+        * Generated answer: 
+        * Prior Distribution:
+    * Save these text reports under `analysis/output/slidevqa_qualitative`
+        * One report for each category
+        * You need to include absolute path to the corresponding ground-truth slides for each question. 
+DONE
+
+NOTE
+    * You should also create a bash file submittable via Slurm. Use the CPU account for this.
+        * Don't activate env in the bash script. Assume you have the `scripts/hpc_activate_env.sh` run already
+        * Assume the script is run from `/home/jc2124/rds/rds-cvnlp-hirYTW1FQIw/shared_space/A-RAVQA`

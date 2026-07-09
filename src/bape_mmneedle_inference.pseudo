@@ -1,0 +1,19 @@
+CONTEXT and REQUIREMENTS
+    * Example inference implementation: `src/bape_slidevqa_inference.py`, 
+    * bash script should be under `scripts/mmneedle_bape`
+        * bash script should accept the model to test
+        * should be able to specify multiple examples, similar to `scripts/slidevqa_bape/run_qwen2vl_lora_slidevqa_bape.sh`
+    * should re-use the data loading and evaluation from `third_party/mmneedle`
+        * Report existence, index, and exact as in the paper.
+    * should produce a per-instance, marked decoding file similar to done in Infoseek, E-VQA, and SlideVQA
+        * this would include BEFT model's prior weights, etc.
+        * also per-instance existence, index, and exact metrics
+    * Align prompt with that used in scripts/mmneedle_curate/curate_n_by_n_training.py
+    * Should be able to specify the stitching (NxN) and haystack (M) setting
+
+DO
+    * Prepare/load the MMNeedle Test suite.
+    * Run BAPE inference, reusing the inference engine.
+    * Run evaluation
+    * Save per-instance code, output a summary scores.json, and print
+DONE

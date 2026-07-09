@@ -1,0 +1,21 @@
+{
+  "inference_csv": "outputs/1225/BAPE/Infoseek/InfoseekNew-BAPE-BEFT[K=2]-data=64000-K=5-h4-prior=prior_head-retrieved_passage-TakeN=256/inference_results_with_predictions.csv",
+  "output_dir": "analysis/output/predict_retrieval_success/Qwen2-VL-7B-Instruct/InfoseekNew-BAPE-BEFT[K=2]-data=64000-K=5-h4-prior=prior_head-retrieved_passage-TakeN=256/K=5",
+  "model_path": "Qwen/Qwen2-VL-7B-Instruct",
+  "model_backend": "vllm",
+  "processor_path": "Qwen/Qwen2-VL-7B-Instruct",
+  "k": 5,
+  "total_samples": 256,
+  "evaluated_samples": 247,
+  "unparsed_count": 9,
+  "accuracy": 0.6477732793522267,
+  "precision": 0.5137614678899083,
+  "recall": 0.6222222222222222,
+  "f1": 0.5628140703517588,
+  "confusion_matrix": {
+    "tp": 56,
+    "fp": 53,
+    "fn": 34,
+    "tn": 104
+  }
+}

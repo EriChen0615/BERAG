@@ -1,0 +1,5 @@
+Please determine whether the document describes the entity shown in the image. You should reason briefly and then generate either "yes" or "no" after "DECISION:"
+
+Document: <<EVIDENCE>>
+
+Response:

@@ -1,0 +1,10 @@
+Please generate an informative, wikipedia-like document that describes the entity shown in the image. The document should include a title, the name of the entity, and other information relevant to answering the question. The document should be brief (<5 sentences).
+
+Your response should be in the following format:
+
+- TITLE:
+- CONTENT:
+
+Question: <<QUESTION>>
+
+Response:

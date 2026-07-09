@@ -1,0 +1,3 @@
+Answer the question about the image. A retriever has retrieved a relevant document for you and provided it after [EVIDENCE].
+
+Question: <<QUESTION>>

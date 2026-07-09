@@ -1,0 +1,36 @@
+CONTEXT
+    * We are going to use pre-trained model (like Qwen2-VL-Instruct-7B) and closed-source model (like GPT-4o-mini) to predict whether the ground-truth document is present in the provided TopK retrieval list on Infoseek.
+    * These results from promptng pre-trained model will serve as baselines to be compared against BEFT results. These results are located under `analysis/output/predict_retrieval_success`.
+    * BEFT prediction (or 'deflection' or 'abstention') is done by running `analysis/run_prior_logits_abstention_analysis.sh`. You should make sure that our baseline systems also read the same files so that the test instances are controlled (i.e., the same as our BEFT baseline). 
+
+DO
+    * Create a new script under analysis called `predict_retrieval_success_baseline.py`
+        * In this script, you should first read the specified inference file to obtain the question, the image, and the retrieved results. An example file is `outputs/1225/BAPE/Infoseek/InfoseekNew-BAPE-BEFT[K=2]-data=64000-K=1-h4-prior=prior_head-retrieved_passage-TakeN=256/inference_results_with_predictions.csv`
+            * You should look at `passages` for the retrieved passages,and `gt_passage_in_zidx` for whether the ground-truth document is included.
+            * You may also look at `analysis/run_prior_logits_abstention_analysis.sh` to understand how to determine the label for each instance. If a question is to be deflected, that means the GT is not in the retrieved passages.
+        * You should prepare the data read into a dataset for inference.
+            * You shuold flatten the passages, taking the `text` part only and dropping the `score` and `rerank_score` etc. 
+            * You should write a simple prompt that instruct the model to respond with simple 
+            `yes` or `no` to a question on whether the provided document contains sufficient information for answering the VQA question.
+            * You should also prepare the label for each instance. 
+        * Then, you should initialize inference engines, depending on which model is used (i.e., VLLM for Qwen2-VL, and the OpenAI client for GPT-4o). 
+            * You should reuse VLLM engines in `vllm_vqa_inference.py` if you can. 
+            * use greedy decoding by default.
+        * Next, you should run inference through the prepared dataset. 
+            * As you run inference, results should be saved to a jsonl file in the designated output directory. 
+            * You should read the jsonl file (if exists) to avoid rerunning inference.
+            * You should parse the model's text response and save the model's raw response as well as the implied `decision` to be compared with `label`. 
+            * The convention should be `1` means gt exists in the retrieved passage, and `0` otherwise.
+        * After inference is complete, you should now run evaluation. 
+            * You should report prediction accuracy, F1, recall, and precision, the standard metrics for binary classification.
+            * Results should be saved to a json file `score.json`. 
+    * You should create a bash script for launching these experiments.
+        * You should be able to specify the inference files (for different K values). 
+            * Consult `analysis/run_prior_logits_abstention_analysis.sh`. The idea is to run through the inference file for each value of K. 
+        * You should be able to specify the model. 
+        * You should be able to specify a `force_override` flag, which, when set, reruns inference entirely even when a cached result exists. The `jsonl` file will be re-initialized, with the old file deleted. 
+    * You should prepare experiment configuration for Qwen2-VL model, Qwen2.5-VL model, and GPT-4o-mini models. 
+    * note that you must not activate environment or do `cd` in the bash file. 
+    * Consult `scripts/evqa_bape/run_llava_llama3_model_refactored_noprune_retrieve.sh` for defining experiment configs in key-value pairs in bash. 
+DONE
+

@@ -1,0 +1,6 @@
+Answer the question about the image. You should respond in the following schema. You must generate in bullet points with title [THINK] or [ANSWER].
+- For [THINK] bullet, you should reason about the question given the context
+- For [ANSWER] bullet, you should provide the final answer to the question. Your answer should be brief and assertive.
+
+Question: <<QUESTION>>
+Response:

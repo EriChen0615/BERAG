@@ -1,0 +1,159 @@
+Category: long_answer
+Num examples: 5
+
+[Example 1]
+Question ID: 1235
+Question: Which seven sensors are shown in the figure connected to the ECU?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_1235_page_15.png
+GT answer: ENGINE TEMP, INTAKE AIR TEMP, MASS AIR FLOW, THROTTLE POSITION, HEGO, CRANKSHAFT, CAMSHAFT
+Generated answer: ENGINE TEMP SENSOR, INTAKE AIR TEMP SENSOR, MASS AIR FLOW SENSOR, THROTTLE POSITION SENSOR, HEGO SENSOR, CRANKSHAFT SENSOR, CAMSHAFT SENSOR
+Answer word count: 20
+Prior entropy: 0.099563
+Prior Distribution:
+- page_1: logit=-8.500000, prob=0.000203
+- page_2: logit=-8.375000, prob=0.000231
+- page_3: logit=-8.312500, prob=0.000245
+- page_4: logit=-8.312500, prob=0.000245
+- page_5: logit=-8.312500, prob=0.000245
+- page_6: logit=-8.687500, prob=0.000169
+- page_7: logit=-6.500000, prob=0.001503
+- page_8: logit=-6.593750, prob=0.001369
+- page_9: logit=-7.937500, prob=0.000357
+- page_10: logit=-7.187500, prob=0.000756
+- page_11: logit=-7.062500, prob=0.000857
+- page_12: logit=-7.437500, prob=0.000589
+- page_13: logit=-7.312500, prob=0.000667
+- page_14: logit=-7.718750, prob=0.000444
+- page_15: logit=-0.012146, prob=0.987794
+- page_16: logit=-6.937500, prob=0.000971
+- page_17: logit=-7.437500, prob=0.000589
+- page_18: logit=-6.843750, prob=0.001066
+- page_19: logit=-7.312500, prob=0.000667
+- page_20: logit=-6.875000, prob=0.001033
+
+[Example 2]
+Question ID: 1236
+Question: Which seven sensors are shown in the figure connected to that which determines the quantity of fuel to inject based on a number of parameters?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_1236_page_15.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_1236_page_17.png
+GT answer: ENGINE TEMP, INTAKE AIR TEMP, MASS AIR FLOW, THROTTLE POSITION, HEGO, CRANKSHAFT, CAMSHAFT
+Generated answer: ENGINE TEMP SENSOR, INTAKE AIR TEMP SENSOR, MASS AIR FLOW SENSOR, THROTTLE POSITION SENSOR, HEGO SENSOR, CRANKSHAFT SENSOR, CAMSHAFT SENSOR
+Answer word count: 20
+Prior entropy: 0.427921
+Prior Distribution:
+- page_1: logit=-8.625000, prob=0.000180
+- page_2: logit=-8.812500, prob=0.000149
+- page_3: logit=-8.812500, prob=0.000149
+- page_4: logit=-8.812500, prob=0.000149
+- page_5: logit=-9.000000, prob=0.000123
+- page_6: logit=-8.937500, prob=0.000131
+- page_7: logit=-7.437500, prob=0.000589
+- page_8: logit=-7.500000, prob=0.000553
+- page_9: logit=-8.437500, prob=0.000217
+- page_10: logit=-8.312500, prob=0.000245
+- page_11: logit=-6.906250, prob=0.001001
+- page_12: logit=-8.312500, prob=0.000245
+- page_13: logit=-8.125000, prob=0.000296
+- page_14: logit=-8.187500, prob=0.000278
+- page_15: logit=-0.132812, prob=0.875513
+- page_16: logit=-5.812500, prob=0.002990
+- page_17: logit=-2.156250, prob=0.115743
+- page_18: logit=-8.375000, prob=0.000231
+- page_19: logit=-8.187500, prob=0.000278
+- page_20: logit=-6.968750, prob=0.000941
+
+[Example 3]
+Question ID: 998
+Question: What are three steps when planning for sales training?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_998_page_4.png
+GT answer: Assess Training Needs, Setting Objectives, Setting Budget
+Generated answer: Assessing sales training needs, establishing specific objectives for the training program, setting a budget for the program
+Answer word count: 17
+Prior entropy: 0.461437
+Prior Distribution:
+- page_1: logit=-10.500000, prob=0.000028
+- page_2: logit=-11.125000, prob=0.000015
+- page_3: logit=-10.375000, prob=0.000031
+- page_4: logit=-1.835938, prob=0.159511
+- page_5: logit=-10.812500, prob=0.000020
+- page_6: logit=-11.562500, prob=0.000010
+- page_7: logit=-11.750000, prob=0.000008
+- page_8: logit=-0.177734, prob=0.837412
+- page_9: logit=-11.312500, prob=0.000012
+- page_10: logit=-11.312500, prob=0.000012
+- page_11: logit=-5.937500, prob=0.002639
+- page_12: logit=-8.625000, prob=0.000180
+- page_13: logit=-11.375000, prob=0.000011
+- page_14: logit=-11.250000, prob=0.000013
+- page_15: logit=-11.312500, prob=0.000012
+- page_16: logit=-10.812500, prob=0.000020
+- page_17: logit=-11.500000, prob=0.000010
+- page_18: logit=-11.562500, prob=0.000010
+- page_19: logit=-10.625000, prob=0.000024
+- page_20: logit=-10.750000, prob=0.000021
+
+[Example 4]
+Question ID: 999
+Question: What are three steps when planning for that which has the objective to Increase productivity, Create positive attitudes/improve morale, and Improve efficiencies (time and territory) among others?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_999_page_4.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_999_page_5.png
+GT answer: Assess Training Needs, Setting Objectives, Setting Budget
+Generated answer: Assessing sales training needs, Establishing specific objectives for the training program, Setting a budget for the program
+Answer word count: 17
+Prior entropy: 0.663618
+Prior Distribution:
+- page_1: logit=-11.625000, prob=0.000009
+- page_2: logit=-11.812500, prob=0.000007
+- page_3: logit=-11.312500, prob=0.000012
+- page_4: logit=-2.109375, prob=0.121466
+- page_5: logit=-5.843750, prob=0.002902
+- page_6: logit=-11.750000, prob=0.000008
+- page_7: logit=-12.125000, prob=0.000005
+- page_8: logit=-0.229492, prob=0.795934
+- page_9: logit=-11.312500, prob=0.000012
+- page_10: logit=-11.125000, prob=0.000015
+- page_11: logit=-2.546875, prob=0.078424
+- page_12: logit=-6.781250, prob=0.001136
+- page_13: logit=-11.812500, prob=0.000007
+- page_14: logit=-11.937500, prob=0.000007
+- page_15: logit=-11.937500, prob=0.000007
+- page_16: logit=-11.125000, prob=0.000015
+- page_17: logit=-11.562500, prob=0.000010
+- page_18: logit=-11.875000, prob=0.000007
+- page_19: logit=-11.562500, prob=0.000010
+- page_20: logit=-11.750000, prob=0.000008
+
+[Example 5]
+Question ID: 2055
+Question: What is advertising?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_2055_page_7.png
+GT answer: using mass media to influence an audience
+Generated answer: paid non-personal communication from an identified sponsor using mass media to persuade or influence an audience
+Answer word count: 16
+Prior entropy: 0.376036
+Prior Distribution:
+- page_1: logit=-6.312500, prob=0.001814
+- page_2: logit=-6.812500, prob=0.001100
+- page_3: logit=-6.593750, prob=0.001369
+- page_4: logit=-6.312500, prob=0.001814
+- page_5: logit=-6.500000, prob=0.001503
+- page_6: logit=-2.859375, prob=0.057307
+- page_7: logit=-0.081055, prob=0.922176
+- page_8: logit=-7.250000, prob=0.000710
+- page_9: logit=-6.843750, prob=0.001066
+- page_10: logit=-7.281250, prob=0.000688
+- page_11: logit=-7.187500, prob=0.000756
+- page_12: logit=-6.156250, prob=0.002120
+- page_13: logit=-6.906250, prob=0.001002
+- page_14: logit=-7.031250, prob=0.000884
+- page_15: logit=-6.687500, prob=0.001246
+- page_16: logit=-6.406250, prob=0.001651
+- page_17: logit=-7.375000, prob=0.000627
+- page_18: logit=-7.156250, prob=0.000780
+- page_19: logit=-7.156250, prob=0.000780
+- page_20: logit=-7.406250, prob=0.000607

@@ -1,0 +1,4 @@
+Answer the question after [QUESTION] about the image based on the provided passage. Follow the guidelines below:
+* If no passage is provided, use your internal knowledge. 
+* Be critical and ignore irrelevant evidences (e.g., when the passage is not about the shown entity in the image). 
+* You should first summarize all relevant facts and then give your answer after [ANSWER]

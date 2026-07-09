@@ -1,0 +1,163 @@
+Category: high_entropy_multi_gt_correct
+Num examples: 5
+
+[Example 1]
+Question ID: 1108
+Question: What is the death rate per 100,000 for “BRAIN ATTACK”?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_1108_page_6.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_1108_page_7.png
+GT answer: 60.2
+Generated answer: 60.2
+Answer word count: 1
+Prior entropy: 2.265652
+Prior Distribution:
+- page_1: logit=-4.156250, prob=0.015672
+- page_2: logit=-5.250000, prob=0.005250
+- page_3: logit=-4.218750, prob=0.014723
+- page_4: logit=-3.953125, prob=0.019202
+- page_5: logit=-3.859375, prob=0.021089
+- page_6: logit=-1.906250, prob=0.148695
+- page_7: logit=-1.890625, prob=0.151037
+- page_8: logit=-4.218750, prob=0.014723
+- page_9: logit=-1.398438, prob=0.247080
+- page_10: logit=-3.796875, prob=0.022450
+- page_11: logit=-3.890625, prob=0.020441
+- page_12: logit=-4.937500, prob=0.007175
+- page_13: logit=-4.187500, prob=0.015190
+- page_14: logit=-4.125000, prob=0.016170
+- page_15: logit=-2.343750, prob=0.096005
+- page_16: logit=-1.843750, prob=0.158285
+- page_17: logit=-5.062500, prob=0.006332
+- page_18: logit=-5.156250, prob=0.005766
+- page_19: logit=-4.375000, prob=0.012593
+- page_20: logit=-6.156250, prob=0.002121
+
+[Example 2]
+Question ID: 2194
+Question: How is the investment in mobile ads evolving?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_2194_page_5.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_2194_page_6.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_2194_page_7.png
+GT answer: increasing
+Generated answer: Increasing
+Answer word count: 1
+Prior entropy: 2.034265
+Prior Distribution:
+- page_1: logit=-4.343750, prob=0.012995
+- page_2: logit=-4.062500, prob=0.017216
+- page_3: logit=-4.687500, prob=0.009215
+- page_4: logit=-4.875000, prob=0.007640
+- page_5: logit=-3.640625, prob=0.026251
+- page_6: logit=-1.804688, prob=0.164623
+- page_7: logit=-1.093750, prob=0.335156
+- page_8: logit=-3.625000, prob=0.026665
+- page_9: logit=-4.812500, prob=0.008132
+- page_10: logit=-1.500000, prob=0.223262
+- page_11: logit=-4.281250, prob=0.013834
+- page_12: logit=-4.937500, prob=0.007177
+- page_13: logit=-5.125000, prob=0.005950
+- page_14: logit=-4.937500, prob=0.007177
+- page_15: logit=-3.359375, prob=0.034777
+- page_16: logit=-4.781250, prob=0.008390
+- page_17: logit=-5.406250, prob=0.004491
+- page_18: logit=-2.593750, prob=0.074783
+- page_19: logit=-5.281250, prob=0.005089
+- page_20: logit=-4.937500, prob=0.007177
+
+[Example 3]
+Question ID: 1876
+Question: Regarding Google market share as of end 1st Qtr 2015, which is a greater percentage, Asia or the region where Bing market share as of end 1st Qtr 2015 was 8.61%?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_1876_page_4.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_1876_page_7.png
+GT answer: Asia
+Generated answer: Asia
+Answer word count: 1
+Prior entropy: 1.882266
+Prior Distribution:
+- page_1: logit=-5.687500, prob=0.003393
+- page_2: logit=-5.843750, prob=0.002902
+- page_3: logit=-7.062500, prob=0.000858
+- page_4: logit=-0.976562, prob=0.377129
+- page_5: logit=-3.906250, prob=0.020144
+- page_6: logit=-6.437500, prob=0.001603
+- page_7: logit=-1.414062, prob=0.243493
+- page_8: logit=-4.250000, prob=0.014284
+- page_9: logit=-12.312500, prob=0.000005
+- page_10: logit=-5.375000, prob=0.004637
+- page_11: logit=-8.687500, prob=0.000169
+- page_12: logit=-10.875000, prob=0.000019
+- page_13: logit=-3.234375, prob=0.039440
+- page_14: logit=-6.656250, prob=0.001288
+- page_15: logit=-2.078125, prob=0.125339
+- page_16: logit=-3.687500, prob=0.025069
+- page_17: logit=-3.968750, prob=0.018923
+- page_18: logit=-3.078125, prob=0.046110
+- page_19: logit=-3.171875, prob=0.041983
+- page_20: logit=-3.406250, prob=0.033212
+
+[Example 4]
+Question ID: 634
+Question: What are three FIBER REINFORCED POLYMER composite types?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_634_page_1.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_634_page_13.png
+GT answer: CFRP, AFRP, GFRP
+Generated answer: CFRP, AFRP, GFRP
+Answer word count: 3
+Prior entropy: 1.721777
+Prior Distribution:
+- page_1: logit=-2.546875, prob=0.078425
+- page_2: logit=-5.687500, prob=0.003392
+- page_3: logit=-4.875000, prob=0.007645
+- page_4: logit=-4.937500, prob=0.007182
+- page_5: logit=-4.531250, prob=0.010781
+- page_6: logit=-4.687500, prob=0.009221
+- page_7: logit=-4.937500, prob=0.007182
+- page_8: logit=-3.421875, prob=0.032693
+- page_9: logit=-3.156250, prob=0.042639
+- page_10: logit=-4.312500, prob=0.013417
+- page_11: logit=-4.625000, prob=0.009816
+- page_12: logit=-4.937500, prob=0.007182
+- page_13: logit=-0.570312, prob=0.566066
+- page_14: logit=-3.421875, prob=0.032693
+- page_15: logit=-5.125000, prob=0.005954
+- page_16: logit=-4.468750, prob=0.011476
+- page_17: logit=-4.750000, prob=0.008663
+- page_18: logit=-4.093750, prob=0.016698
+- page_19: logit=-4.906250, prob=0.007410
+- page_20: logit=-2.109375, prob=0.121468
+
+[Example 5]
+Question ID: 838
+Question: What is the total number of items that look like floating jellyfish to sea turtles used worldwide annually in trillions?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_838_page_10.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_838_page_14.png
+GT answer: 1
+Generated answer: 1
+Answer word count: 1
+Prior entropy: 1.567274
+Prior Distribution:
+- page_1: logit=-5.375000, prob=0.004622
+- page_2: logit=-5.062500, prob=0.006317
+- page_3: logit=-5.375000, prob=0.004622
+- page_4: logit=-4.687500, prob=0.009191
+- page_5: logit=-5.125000, prob=0.005934
+- page_6: logit=-5.218750, prob=0.005403
+- page_7: logit=-5.906250, prob=0.002717
+- page_8: logit=-5.250000, prob=0.005237
+- page_9: logit=-4.968750, prob=0.006938
+- page_10: logit=-1.195312, prob=0.302001
+- page_11: logit=-4.500000, prob=0.011087
+- page_12: logit=-1.804688, prob=0.164195
+- page_13: logit=-4.937500, prob=0.007158
+- page_14: logit=-0.859375, prob=0.422576
+- page_15: logit=-5.250000, prob=0.005237
+- page_16: logit=-3.953125, prob=0.019156
+- page_17: logit=-5.750000, prob=0.003176
+- page_18: logit=-5.093750, prob=0.006123
+- page_19: logit=-5.406250, prob=0.004479
+- page_20: logit=-5.562500, prob=0.003831

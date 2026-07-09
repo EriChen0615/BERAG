@@ -1,0 +1,21 @@
+{
+  "inference_csv": "outputs/1225/BAPE/Infoseek/InfoseekNew-BAPE-BEFT[K=2]-data=64000-K=5-h4-prior=prior_head-retrieved_passage-TakeN=256/inference_results_with_predictions.csv",
+  "output_dir": "analysis/output/predict_retrieval_success/gpt-4o-mini-2024-07-18/InfoseekNew-BAPE-BEFT[K=2]-data=64000-K=5-h4-prior=prior_head-retrieved_passage-TakeN=256/K=5",
+  "model_path": "gpt-4o-mini-2024-07-18",
+  "model_backend": "openai",
+  "processor_path": "gpt-4o-mini-2024-07-18",
+  "k": 5,
+  "total_samples": 256,
+  "evaluated_samples": 256,
+  "unparsed_count": 0,
+  "accuracy": 0.7578125,
+  "precision": 0.6951219512195121,
+  "recall": 0.6063829787234043,
+  "f1": 0.6477272727272727,
+  "confusion_matrix": {
+    "tp": 57,
+    "fp": 25,
+    "fn": 37,
+    "tn": 137
+  }
+}

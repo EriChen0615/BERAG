@@ -1,0 +1,5 @@
+#!/bin/bash
+# rsync -avh --progress hpc:/home/jc2124/rds/rds-cvnlp-hirYTW1FQIw/shared_space/A-RAVQA/third_party/LLaMAFactory/saves/qwen2_vl-2b/full-sft/norag_answer third_party/LLaMAFactory/saves/qwen2_vl-2b/full-sft/norag_answer
+# rsync -avh --progress hpc:/home/jc2124/rds/rds-cvnlp-hirYTW1FQIw/shared_space/A-RAVQA/third_party/LLaMAFactory/saves/qwen2_vl-7b/full-sft/norag_answer/checkpoint-2500 third_party/LLaMAFactory/saves/qwen2_vl-7b/full-sft/norag_answer
+# rsync -avh --progress hpc:/home/jc2124/rds/rds-cvnlp-hirYTW1FQIw/shared_space/A-RAVQA/third_party/LLaMAFactory/data/jinghong_chen/rag1-answer/ third_party/LLaMAFactory/data/jinghong_chen/rag1-answer/
+rsync -avh --progress hpc:/home/jc2124/rds/rds-cvnlp-hirYTW1FQIw/shared_space/A-RAVQA/third_party/LLaMAFactory/saves/qwen2_vl-2b/lora/doc1_verify/ third_party/LLaMAFactory/saves/qwen2_vl-2b/lora/doc1_verify/

@@ -1,0 +1,33 @@
+CONTEXT:
+    * MSCOCO2014 training image path = /home/jc2124/rds/rds-cvnlp-hirYTW1FQIw/shared_space/vqa_data/MSCOCO2014/train2014
+    * MMNeedle Code directory = third_party/mmneedle
+        * stitched image sampling example code = third_party/mmneedle/sample_single_needle.py
+        * MMNeedle Inference Code = third_party/mmneedle/needle.py
+        * MMNeedle Evaluation = third_party/mmneedle/evaluate.py
+    * MMNeedle Paper: https://arxiv.org/pdf/2406.11230
+    * BERAG inference code example: src/bape_slidevqa_inference.py
+    * BEFT training
+        * example configs: third_party/LLaMA-Factory-2502/my_configs/slidevqa/beft
+        * training code at: third_party/LLaMA-Factory-2502
+        * example training data curation at: scripts/slidevqa_curate/ragk_slidevqa.sh
+    * LLaVA-Llama-3-8B model: https://huggingface.co/xtuner/llava-llama-3-8b.
+
+DO
+    * Form stitched images (1x1, 2x2) using MSCOCO2014 training data.
+        * Create new processing scripts under ``scripts/mmneedle_curate``.
+        * Make necessary adjustments to MMNeedle image sampling example code.
+        * Ask me to inspect the output artifacts before proceeding.
+        * Must be able to set NUM_SEQUENCES, so that I can start with a small number first.
+    * Form training dataset for 1x1 and 2x2 setting, separately.
+        * Create one script under  ``scripts/mmneedle_curate`` where NxN can be customized. Consult example training data curation.
+        * Make sure these data output directory follows MMNeedle's directory naming convention.
+        * Must be able to specify TAKE_N to control training dataset size.
+        * Training data:
+            * Common input (text-only): caption of the GT image. Consult paper and MMNeedle code.
+            * Passages (text-and-image): each stitched image acts as a separate passage. The text part contains the index of the current image. 
+            * Output: follow the expected format under ``Exact'' evaluation in MMNeedle.
+        * Ask for confirmation on complete.
+    * LlamaFactory Training script:
+        * consult slidevqa example. But finetune the LLaVA-Llama-3-8B model. 
+        * No need for smoke run. I will run it myself. 
+DONE

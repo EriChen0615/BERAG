@@ -1,0 +1,1041 @@
+{
+  "seed": 42,
+  "source": "/home/jc2124/rds/rds-cvnlp-hirYTW1FQIw/shared_space/A-RAVQA/outputs/0jingbiao_mei/EVQA-testfull-with-retrieval",
+  "repo_root": "/home/jc2124/rds/rds-cvnlp-hirYTW1FQIw/shared_space/A-RAVQA",
+  "n_total_source": 3750,
+  "n_with_gt_in_top20": 2841,
+  "fraction_gt_in_top20": 0.7576,
+  "n_sample_requested": 256,
+  "n_sample_actual": 256,
+  "variant": "gtdoc_at_5-8",
+  "bin_inclusive": [
+    5,
+    8
+  ],
+  "per_row_audit": [
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 5,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 9,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 5,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 16,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 10,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 20,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 11,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 8,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 15,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 17,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 11,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 6,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 8,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 19,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 9,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 12,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 18,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 19,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 20,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 18,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 5,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 7,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 19,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 18,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 8,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 9,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 5,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 7,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 9,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 5,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 15,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 15,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 8,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 9,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 7,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 6,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 6,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 13,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 5,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 7,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 6,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 15,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 5,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 5,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 8,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 8,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 4,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 9,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 6,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 8,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 9,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 10,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 5,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 6,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 18,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 8,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 5,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 14,
+      "final_gt_rank": 6
+    },
+    {
+      "original_gt_rank": 2,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 5
+    },
+    {
+      "original_gt_rank": 3,
+      "final_gt_rank": 8
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 7
+    },
+    {
+      "original_gt_rank": 1,
+      "final_gt_rank": 6
+    }
+  ]
+}

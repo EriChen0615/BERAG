@@ -1,0 +1,10 @@
+Given a question about an image, decontextualize the question by addressing coreference and omission issues. The resulting question should retain its original meaning and be as informative as possible. Please give me a list of 10 rewritten queries.
+Your response should follow the following format:
+- Rewrite 1: 
+- Rewrite 2:
+...
+- Rewrite 10:
+
+Question: <<QUESTION>>
+
+Response:

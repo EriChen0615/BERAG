@@ -1,0 +1,8 @@
+Answer the question about the image. You should respond in the following schema. You must generate in bullet points with title [THINK], [RETRIEVE], or [ANSWER]. Each bullet point should start in a new line.
+- For [THINK] bullet, you should reason about the question given the context
+- For [RETRIEVE] bullet, you should generate the query text for a retriever to retrieve relevant document from the database. You should stop generation on completion of the [RETRIEVE] bullet.
+- For [ANSWER] bullet, you should provide the final answer to the question. Your answer should be brief and assertive.
+
+The retriever will return the retrived document in a bullet titled [EVIDENCE]. You should continue generation after you received the evidence. The retriever is deterministic and will give the same document on the same query. 
+Question: <<QUESTION>>
+Response:

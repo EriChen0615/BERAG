@@ -1,0 +1,10 @@
+Please determine whether the document provided after "Docuemnt" satisfies the following criteria:
+1. contains information about the entity shown in the image. 
+2. provides useful information for answering the question shown after "Question".
+
+You should generate either "yes" or "no" after "DECISION:". You should generate "yes" only when all criteria are met.
+
+Question: <<QUESTION>>
+Document: <<EVIDENCE>>
+
+DECISION: 

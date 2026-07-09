@@ -1,0 +1,162 @@
+Category: multi_gt_correct
+Num examples: 5
+
+[Example 1]
+Question ID: 1
+Question: How much is the Trading Operating Profit in the year Nestlé achieved the third largest Organic Growth in 10 years?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_1_page_5.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_1_page_7.png
+GT answer: 12.5 bn
+Generated answer: 12.5 bn
+Answer word count: 2
+Prior entropy: 0.014105
+Prior Distribution:
+- page_1: logit=-9.937500, prob=0.000048
+- page_2: logit=-10.937500, prob=0.000018
+- page_3: logit=-10.187500, prob=0.000038
+- page_4: logit=-9.187500, prob=0.000102
+- page_5: logit=-0.001457, prob=0.998550
+- page_6: logit=-8.625000, prob=0.000180
+- page_7: logit=-7.500000, prob=0.000553
+- page_8: logit=-10.562500, prob=0.000026
+- page_9: logit=-10.312500, prob=0.000033
+- page_10: logit=-10.687500, prob=0.000023
+- page_11: logit=-10.812500, prob=0.000020
+- page_12: logit=-10.875000, prob=0.000019
+- page_13: logit=-11.250000, prob=0.000013
+- page_14: logit=-10.812500, prob=0.000020
+- page_15: logit=-11.812500, prob=0.000007
+- page_16: logit=-10.375000, prob=0.000031
+- page_17: logit=-10.125000, prob=0.000040
+- page_18: logit=-8.500000, prob=0.000203
+- page_19: logit=-10.187500, prob=0.000038
+- page_20: logit=-10.187500, prob=0.000038
+
+[Example 2]
+Question ID: 3
+Question: Which achieved better performance in the year Nestlé acquired Prometheus, Organic Growth or Real Internal Growth?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_3_page_5.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_3_page_12.png
+GT answer: Organic Growth
+Generated answer: Organic Growth
+Answer word count: 2
+Prior entropy: 0.613019
+Prior Distribution:
+- page_1: logit=-7.875000, prob=0.000380
+- page_2: logit=-8.187500, prob=0.000278
+- page_3: logit=-7.812500, prob=0.000404
+- page_4: logit=-8.062500, prob=0.000315
+- page_5: logit=-0.255859, prob=0.773577
+- page_6: logit=-6.437500, prob=0.001599
+- page_7: logit=-1.539062, prob=0.214395
+- page_8: logit=-7.031250, prob=0.000883
+- page_9: logit=-7.343750, prob=0.000646
+- page_10: logit=-7.906250, prob=0.000368
+- page_11: logit=-8.250000, prob=0.000261
+- page_12: logit=-6.718750, prob=0.001207
+- page_13: logit=-8.625000, prob=0.000179
+- page_14: logit=-7.656250, prob=0.000473
+- page_15: logit=-8.687500, prob=0.000169
+- page_16: logit=-7.687500, prob=0.000458
+- page_17: logit=-6.250000, prob=0.001929
+- page_18: logit=-6.281250, prob=0.001869
+- page_19: logit=-7.875000, prob=0.000380
+- page_20: logit=-8.375000, prob=0.000230
+
+[Example 3]
+Question ID: 9
+Question: What is the percentage of the 10-year annual average of the Real Internal Growth for the company which has the tagline "Good Food, Good Life"?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_9_page_1.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_9_page_7.png
+GT answer: 3.6
+Generated answer: 3.6
+Answer word count: 1
+Prior entropy: 0.049621
+Prior Distribution:
+- page_1: logit=-5.968750, prob=0.002557
+- page_2: logit=-11.562500, prob=0.000010
+- page_3: logit=-11.125000, prob=0.000015
+- page_4: logit=-9.562500, prob=0.000070
+- page_5: logit=-5.531250, prob=0.003961
+- page_6: logit=-10.187500, prob=0.000038
+- page_7: logit=-0.007080, prob=0.992943
+- page_8: logit=-10.875000, prob=0.000019
+- page_9: logit=-9.937500, prob=0.000048
+- page_10: logit=-10.500000, prob=0.000028
+- page_11: logit=-11.125000, prob=0.000015
+- page_12: logit=-10.187500, prob=0.000038
+- page_13: logit=-11.062500, prob=0.000016
+- page_14: logit=-10.625000, prob=0.000024
+- page_15: logit=-12.500000, prob=0.000004
+- page_16: logit=-11.250000, prob=0.000013
+- page_17: logit=-10.500000, prob=0.000028
+- page_18: logit=-9.000000, prob=0.000123
+- page_19: logit=-11.187500, prob=0.000014
+- page_20: logit=-10.187500, prob=0.000038
+
+[Example 4]
+Question ID: 11
+Question: How many kinds of Business Intelligence Competence Center Key Skills are there?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_11_page_4.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_11_page_8.png
+GT answer: 3
+Generated answer: 3
+Answer word count: 1
+Prior entropy: 0.005853
+Prior Distribution:
+- page_1: logit=-10.812500, prob=0.000020
+- page_2: logit=-11.062500, prob=0.000016
+- page_3: logit=-9.500000, prob=0.000075
+- page_4: logit=-9.500000, prob=0.000075
+- page_5: logit=-10.750000, prob=0.000021
+- page_6: logit=-10.062500, prob=0.000043
+- page_7: logit=-10.375000, prob=0.000031
+- page_8: logit=-0.000523, prob=0.999483
+- page_9: logit=-11.250000, prob=0.000013
+- page_10: logit=-10.750000, prob=0.000021
+- page_11: logit=-11.125000, prob=0.000015
+- page_12: logit=-10.875000, prob=0.000019
+- page_13: logit=-11.062500, prob=0.000016
+- page_14: logit=-11.000000, prob=0.000017
+- page_15: logit=-10.937500, prob=0.000018
+- page_16: logit=-11.062500, prob=0.000016
+- page_17: logit=-11.312500, prob=0.000012
+- page_18: logit=-10.812500, prob=0.000020
+- page_19: logit=-10.750000, prob=0.000021
+- page_20: logit=-9.937500, prob=0.000048
+
+[Example 5]
+Question ID: 14
+Question: What is the biggest reason why users sometimes choose not to use the applications, data of which are not mostly trusted by 8% users?
+GT Slide Images:
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_14_page_17.png
+- /rds/project/rds-hirYTW1FQIw/shared_space/vqa_data/KBVQA_data/SlideVQA/test_14_page_18.png
+GT answer: Do not have all the data you need
+Generated answer: Do not have all the data you need
+Answer word count: 8
+Prior entropy: 0.019348
+Prior Distribution:
+- page_1: logit=-11.562500, prob=0.000010
+- page_2: logit=-11.875000, prob=0.000007
+- page_3: logit=-12.312500, prob=0.000004
+- page_4: logit=-12.062500, prob=0.000006
+- page_5: logit=-12.125000, prob=0.000005
+- page_6: logit=-11.562500, prob=0.000010
+- page_7: logit=-11.750000, prob=0.000008
+- page_8: logit=-10.937500, prob=0.000018
+- page_9: logit=-11.375000, prob=0.000011
+- page_10: logit=-11.562500, prob=0.000010
+- page_11: logit=-11.562500, prob=0.000010
+- page_12: logit=-10.750000, prob=0.000021
+- page_13: logit=-11.812500, prob=0.000007
+- page_14: logit=-11.750000, prob=0.000008
+- page_15: logit=-9.562500, prob=0.000070
+- page_16: logit=-10.750000, prob=0.000021
+- page_17: logit=-0.002502, prob=0.997532
+- page_18: logit=-6.187500, prob=0.002055
+- page_19: logit=-9.062500, prob=0.000116
+- page_20: logit=-9.562500, prob=0.000070

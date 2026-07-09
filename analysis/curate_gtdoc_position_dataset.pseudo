@@ -1,0 +1,33 @@
+GOAL
+    * This script will create a set of E-VQA subsets where we control the position of the gold document in the retrieved list.
+
+CONTEXT
+    * E-VQA dataset with retrieval results: `outputs/0jingbiao_mei/EVQA-testfull-with-retrieval`
+        * field: retrieved_passage
+        * This is PreFLMR-L retrieval result
+    * VLLM infernce script for Qwen2-VL-Instruct-7B base, SFT,and DPO model on EVQA: `scripts/evqa_vllm`
+        * note that the base model may need separate treatment, as it doesn't have LoRA adapter weights.
+    * BAPE inference script `scripts/evqa_bape/run_qwen2vl_model_refactored_noprune_retrieve.sh`
+        * use the active l0h4 model in that script for this experiment.
+    * Results should be saved to `outputs/0426/EVQA-positional-analysis` 
+DO
+    * Sample 256 examples from the E-VQA dataset with retrieval results where the gold document appears in the Top-20 documents.
+    * Create five test sets by controlling the position of the gold document in the retrieved list:
+        * For the first test set, all gt documents appear in position 1-4 in the retrieval list. Process each example as follows:
+            * When the gt document is already in position 1-4, do nothing. 
+            * When the gt document is not in position 1-4, randomly select an integer in [1,4], then swap the gt document with the i-th document to form the new retrieval list.
+            * This test set is named 'EVQA-256-gtdoc@1-4`. Save this to disk under analysis/EVQA-gtdoc-position-datasets/
+        * Repeat the above to form test set where the gt position is controlled at 5-8, 9-12, 13-16, 17-20, resp.
+    * After curating the document, run the base Qwen2-VL-Instruct-7B model, the SFT model, and the DPO model using vllm inference script. 
+        * save these results under `outputs/0426/EVQA-positional-analysis`, with the similar naming convention to previous EVQA experiments (keep model name, TopK, etc.)
+    * Also run the BEFT model on this set (BAPE inference). 
+
+NOTES
+    * For curation scripts, you need to make the scripts submittable via slurm (CPU node).
+    * For inference script, you need to use GPU 
+    * You need to ask me to run the sbatch command, instead of doing it yourself.
+    * Do not activate env in the scripts. I will choose the appropriate document. 
+    * Assume the bash files are called from `/home/jc2124/rds/rds-cvnlp-hirYTW1FQIw/shared_space/A-RAVQA`
+        * Don't use the bash file directory to identify files. This doesn't work for slurm.
+        * Use absolute path if needed.
+

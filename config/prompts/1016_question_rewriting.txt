@@ -1,0 +1,5 @@
+Given a question about an image, decontextualize the question by addressing coreference and omission issues. The resulting query should retain its original meaning and be as informative as possible. Please give me one rewritten query.
+
+Question: <<QUESTION>>
+
+Response:

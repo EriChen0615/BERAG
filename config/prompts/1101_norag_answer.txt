@@ -1,0 +1,5 @@
+Answer the question about the image.
+
+Question: <<QUESTION>>
+
+Answer: 

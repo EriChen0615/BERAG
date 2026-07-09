@@ -1,0 +1,5 @@
+Experiment,K,Accuracy (%),Precision (%),Recall (%),F1,Unparsed Count,Total Samples
+InfoseekNew-BAPE-BEFT[K=2]-data=64000-K=1-h4-prior=prior_head-retrieved_passage-TakeN=256,1,77.34375,41.17647058823529,81.3953488372093,0.546875,0,256
+InfoseekNew-BAPE-BEFT[K=2]-data=64000-K=2-h4-prior=prior_head-retrieved_passage-TakeN=256,2,79.296875,55.42168674698795,74.19354838709677,0.6344827586206897,0,256
+InfoseekNew-BAPE-BEFT[K=2]-data=64000-K=3-h4-prior=prior_head-retrieved_passage-TakeN=256,3,79.296875,64.86486486486487,64.0,0.6442953020134228,0,256
+InfoseekNew-BAPE-BEFT[K=2]-data=64000-K=5-h4-prior=prior_head-retrieved_passage-TakeN=256,5,75.78125,69.51219512195121,60.63829787234043,0.6477272727272727,0,256

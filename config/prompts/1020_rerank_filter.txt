@@ -1,0 +1,11 @@
+Given the following question about the image with 10 retrieved documents, please filter 5 documents and rank these documents based on the relevance to the image and question pair. The relevance is defined as if you are possible to answer the question about the image based on the provided document.
+
+Question: <<QUESTION>>
+
+Retrieved Docs: <<DOCUMENTS>>
+
+Your response should be in the following format: 
+
+- [Verified_Evidence_1]:
+
+Response: 

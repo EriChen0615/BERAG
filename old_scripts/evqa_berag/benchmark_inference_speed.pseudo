@@ -1,0 +1,22 @@
+GOAL:
+    * Benchmark the inference speed (prefill and decode) of BERAG (i.e., BAPE) and regular RAG for K = 5, 10, 20, 30, 50.
+    * Benchmark the effectiveness of branching TopP dropout 
+
+CONTEXT:
+    * The BAPE inference engine `src/bape_inference_engine.py` has already implemented a dynamic_k_top_p argument.
+        * need to make sure that when this is activated, we still use KV cache properly.
+        * however, it does not time prefill/decode time. Also, it does not report the input/output token counts as meta data
+    * We require a transformers inference engine that performs standard RAG decoding with KV caching. 
+
+DO:
+    * Include timing for prefill/decode time for each inference instance. Make sure these are saved together with marked_inference_results in the target output directory.
+    * Report input/output token counts, also include these in the marked inference results.
+    * Create an `inference_report.json` file that documents: average prefill speed (ms), average decode speed (token/ms), average input context (tokens), average output (tokens)
+        * this should be obtained by aggregating statistics from individual inference instance.
+    * Create a normal transformers inference engine (NOT vllm-based!) that runs standard RAG with KV caching. 
+        * Make sure the same inference statistics are logged. 
+    * Create bash files under `evqa_bape` to launch these inferences with TAKE_N=512 for K=5,10,20,30,50 on EVQA. 
+        * Don't activate env in the bash file. Don't use cd. Assume you run from this root directory.
+        * All files should be submittable via slurm to the SL2 GPU account. 
+    * Create a bash file that runs evqa bape with dynamic_k_top_p = 1/2k for each of the K. 
+    * All these experimental results should be saved under `outputs/0426/EVQA-inference-analysis`
