@@ -1,4 +1,5 @@
-data/
 .codex/
 .agents/
 *.zip
+.venv/
+src/train/LlamaFactory-0.9.5-beft/data/EVQA/
