@@ -1,0 +1,73 @@
+[
+  {
+    "messages": [
+      {
+        "content": "<image> Answer the question using the evidence.\n\n<<<EVIDENCE>>>\n\nQuestion: Which evidence describes the image?",
+        "role": "user"
+      },
+      {
+        "content": "The evidence about Bayern Munich players celebrating.",
+        "role": "assistant"
+      }
+    ],
+    "images": [
+      "mllm_demo_data/1.jpg"
+    ],
+    "passages": [
+      {
+        "text": "<image>\nThis evidence shows two Bayern Munich players celebrating on a soccer field.",
+        "images": [
+          "mllm_demo_data/1.jpg"
+        ]
+      },
+      {
+        "text": "<image>\nThis evidence shows an astronaut giving a speech.",
+        "images": [
+          "mllm_demo_data/3.jpg"
+        ]
+      },
+      {
+        "text": "This evidence discusses unrelated media files.",
+        "images": []
+      }
+    ],
+    "gt_passage_idx": [
+      0
+    ]
+  },
+  {
+    "messages": [
+      {
+        "content": "<image> Answer the question using the evidence.\n\n<<<EVIDENCE>>>\n\nQuestion: Why is the person on the ground?",
+        "role": "user"
+      },
+      {
+        "content": "He is sliding on his knees to celebrate.",
+        "role": "assistant"
+      }
+    ],
+    "images": [
+      "mllm_demo_data/2.jpg"
+    ],
+    "passages": [
+      {
+        "text": "This evidence only says that a football player is visible.",
+        "images": []
+      },
+      {
+        "text": "<image>\nThis evidence says Thomas Muller is sliding on his knees after scoring.",
+        "images": [
+          "mllm_demo_data/2.jpg"
+        ]
+      },
+      {
+        "text": "This evidence says the player is celebrating on the field by sliding on his knees.",
+        "images": []
+      }
+    ],
+    "gt_passage_idx": [
+      1,
+      2
+    ]
+  }
+]

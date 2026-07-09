@@ -9,7 +9,7 @@ flash_attn: fa2
 stage: beft
 do_train: true
 finetuning_type: lora
-lora_rank: 8
+lora_rank: 64 
 lora_target: all
 beft_prior_modeling: mlp_head
 beft_prior_head_num_layers: 2
@@ -39,8 +39,8 @@ report_to: none
 ### train
 per_device_train_batch_size: 1
 gradient_accumulation_steps: 1
-learning_rate: 1.0e-4
-beft_prior_head_lr: 1.0e-4
+learning_rate: 1.0e-5
+beft_prior_head_lr: 1.0e-6
 max_steps: 5
 lr_scheduler_type: cosine
 warmup_ratio: 0.0
