@@ -3,3 +3,5 @@
 *.zip
 .venv/
 src/train/LlamaFactory-0.9.5-beft/data/EVQA/
+outputs/jinghong_chen
+src/train/LlamaFactory-0.9.5-beft/data/jinghong_chen/

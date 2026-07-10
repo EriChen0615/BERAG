@@ -486,25 +486,14 @@ if __name__ == "__main__":
         print(f"  Median tokens: {sorted(token_counts)[len(token_counts) // 2]}")
         print(f"  Min tokens: {min(token_counts)}")
         print(f"  Max tokens: {max(token_counts)}")
-        print(f"  Std tokens: {(sum([(x - sum(token_counts)/len(token_counts))**2 for x in token_counts]) / len(token_counts))**0.5:.1f}")
+        # print(f"  Std tokens: {(sum([(x - sum(token_counts)/len(token_counts))**2 for x in token_counts]) / len(token_counts))**0.5:.1f}")
         
-        # Filter examples that exceed max tokens
-        print(f"Filtering examples with > {args.drop_max_tokens} tokens...")
+        # Filter examples that exceed max tokens. `select` avoids the heavy Arrow
+        # rewrite and multiprocessing overhead of `Dataset.filter` for this cheap predicate.
+        print(f"Selecting examples with <= {args.drop_max_tokens} tokens...")
         original_count = len(ds_with_tokens)
-        
-        # Filter dataset with batching and multiple workers for speed
-        # Use batched=True and set num_proc to a higher value (e.g., 8)
-        def filter_by_token_count(batch):
-            # batch['token_count'] is a list of token counts
-            return [tc <= args.drop_max_tokens for tc in batch['token_count']]
-
-        ds_filtered = ds_with_tokens.filter(
-            filter_by_token_count,
-            batched=True,
-            num_proc=8,  # Adjust this number based on your CPU cores
-            desc="Filtering by token count",
-            batch_size=4096,
-        )
+        keep_indices = np.flatnonzero(np.asarray(token_counts) <= args.drop_max_tokens).tolist()
+        ds_filtered = ds_with_tokens.select(keep_indices)
         
         filtered_count = len(ds_filtered)
         dropped_count = original_count - filtered_count
