@@ -333,12 +333,6 @@ def get_train_args(args: dict[str, Any] | list[str] | None = None) -> _TRAIN_CLS
         if data_args.packing:
             raise ValueError("BEFT v1 requires `packing: false`.")
 
-        if training_args.do_train and training_args.per_device_train_batch_size != 1:
-            raise ValueError("BEFT v1 requires `per_device_train_batch_size: 1`.")
-
-        if training_args.do_eval and training_args.per_device_eval_batch_size != 1:
-            raise ValueError("BEFT v1 requires `per_device_eval_batch_size: 1` for evaluation.")
-
     if finetuning_args.stage in ["rm", "ppo"] and training_args.load_best_model_at_end:
         raise ValueError("RM and PPO stages do not support `load_best_model_at_end`.")
 

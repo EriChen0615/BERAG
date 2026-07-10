@@ -36,39 +36,42 @@ if TYPE_CHECKING:
 
 @dataclass
 class BeftDataCollator(MultiModalDataCollatorForSeq2Seq):
-    r"""Expand one BEFT example with K passages into K ordinary multimodal rows."""
+    r"""Expand BEFT examples with K passages each into ordinary multimodal rows."""
 
     def __call__(self, features: list[dict[str, Any]]) -> dict[str, "torch.Tensor"]:
-        if len(features) != 1:
-            raise ValueError("BEFT v1 requires one raw training instance per device batch.")
-
-        feature = features[0]
-        num_passages = len(feature["all_input_ids"])
-        gt_passage_idx = feature.get("gt_passage_idx") or []
-        gt_passage_idx = gt_passage_idx if isinstance(gt_passage_idx, list) else [gt_passage_idx]
-        gt_passage_idx_set = {int(idx) for idx in gt_passage_idx if int(idx) != -1}
-
-        all_passage_images = feature.get("all_passage_images") or [[] for _ in range(num_passages)]
         expanded_features = []
         is_gt_passage = []
-        for idx, (input_ids, attention_mask, labels) in enumerate(
-            zip(feature["all_input_ids"], feature["all_attention_mask"], feature["all_labels"], strict=True)
-        ):
-            passage_images = all_passage_images[idx] if idx < len(all_passage_images) else []
-            expanded_features.append(
-                {
-                    "input_ids": input_ids,
-                    "attention_mask": attention_mask,
-                    "labels": labels,
-                    "images": passage_images,
-                    "videos": feature.get("videos") or [],
-                    "audios": feature.get("audios") or [],
-                }
-            )
-            is_gt_passage.append(int(idx in gt_passage_idx_set))
+        batch_idx = []
+        for instance_idx, feature in enumerate(features):
+            num_passages = len(feature["all_input_ids"])
+            gt_passage_idx = feature.get("gt_passage_idx") or []
+            gt_passage_idx = gt_passage_idx if isinstance(gt_passage_idx, list) else [gt_passage_idx]
+            gt_passage_idx_set = {int(idx) for idx in gt_passage_idx if int(idx) != -1}
+
+            all_passage_images = feature.get("all_passage_images") or [[] for _ in range(num_passages)]
+            for passage_idx, (input_ids, attention_mask, labels) in enumerate(
+                zip(feature["all_input_ids"], feature["all_attention_mask"], feature["all_labels"], strict=True)
+            ):
+                passage_images = all_passage_images[passage_idx] if passage_idx < len(all_passage_images) else []
+                expanded_features.append(
+                    {
+                        "input_ids": input_ids,
+                        "attention_mask": attention_mask,
+                        "labels": labels,
+                        "images": passage_images,
+                        "videos": feature.get("videos") or [],
+                        "audios": feature.get("audios") or [],
+                    }
+                )
+                is_gt_passage.append(int(passage_idx in gt_passage_idx_set))
+                batch_idx.append(instance_idx)
+
+        if len(expanded_features) == 0:
+            raise ValueError("BEFT requires at least one passage row in a device batch.")
 
         batch = super().__call__(expanded_features)
         batch["is_gt_passage"] = torch.tensor(is_gt_passage, dtype=torch.long)
+        batch["batch_idx"] = torch.tensor(batch_idx, dtype=torch.long)
         return batch
 
 

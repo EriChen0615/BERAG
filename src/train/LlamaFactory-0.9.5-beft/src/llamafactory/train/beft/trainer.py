@@ -70,6 +70,69 @@ def _build_prior_head(finetuning_args: "FinetuningArguments", hidden_size: int) 
     raise ValueError(f"Unknown BEFT prior modeling type: {finetuning_args.beft_prior_modeling}.")
 
 
+def compute_grouped_beft_loss(
+    logits: "torch.Tensor",
+    labels: "torch.Tensor",
+    batch_idx: "torch.Tensor | None" = None,
+    prior_logits: "torch.Tensor | None" = None,
+    is_gt_passage: "torch.Tensor | None" = None,
+    prior_loss_fn: "nn.Module | None" = None,
+    use_prior_head_loss: bool = False,
+    prior_loss_factor: float = 1.0,
+    metric_callback: Any | None = None,
+) -> "torch.Tensor":
+    r"""Compute BEFT loss independently for each original instance in a flattened passage batch."""
+    if logits.shape[:2] != labels.shape:
+        raise ValueError(f"logits shape {tuple(logits.shape)} is incompatible with labels {tuple(labels.shape)}.")
+
+    if batch_idx is None:
+        batch_idx = torch.zeros(labels.size(0), dtype=torch.long, device=labels.device)
+    else:
+        batch_idx = batch_idx.to(device=labels.device, dtype=torch.long).view(-1)
+
+    if batch_idx.numel() != labels.size(0):
+        raise ValueError(
+            f"batch_idx length {batch_idx.numel()} does not match flattened BEFT rows {labels.size(0)}."
+        )
+
+    total_losses = []
+    for group_idx in torch.unique(batch_idx, sorted=True):
+        row_indices = torch.nonzero(batch_idx == group_idx, as_tuple=False).flatten()
+        group_logits = logits.index_select(0, row_indices.to(device=logits.device))
+        group_labels = labels.index_select(0, row_indices)
+        group_token_logps, _ = get_answer_token_logps(group_logits, group_labels)
+
+        group_prior_logits = None
+        if prior_logits is not None:
+            group_prior_logits = prior_logits.index_select(0, row_indices.to(device=prior_logits.device))
+
+        beft_loss, posterior_logprobs, prior_logprobs = compute_beft_loss(group_token_logps, group_prior_logits)
+        prior_loss = beft_loss.new_zeros(())
+        group_is_gt_passage = None
+        if is_gt_passage is not None:
+            group_is_gt_passage = is_gt_passage.to(device=labels.device).index_select(0, row_indices)
+
+        if use_prior_head_loss and group_prior_logits is not None and group_is_gt_passage is not None:
+            if prior_loss_fn is None:
+                raise ValueError("prior_loss_fn is required when BEFT prior-head loss is enabled.")
+
+            prior_targets = group_is_gt_passage.to(
+                device=group_prior_logits.device, dtype=group_prior_logits.dtype
+            ).view_as(group_prior_logits)
+            if torch.any(prior_targets > 0):
+                prior_loss = prior_loss_fn(group_prior_logits, prior_targets) * prior_loss_factor
+
+        total_loss = beft_loss + prior_loss
+        total_losses.append(total_loss)
+        if metric_callback is not None:
+            metric_callback(beft_loss, prior_loss, total_loss, posterior_logprobs, prior_logprobs, group_is_gt_passage)
+
+    if len(total_losses) == 0:
+        raise ValueError("BEFT requires at least one grouped loss in a device batch.")
+
+    return torch.stack(total_losses).mean()
+
+
 class CustomSeq2SeqBEFTTrainer(CustomSeq2SeqTrainer):
     r"""Seq2Seq trainer with BEFT marginalized next-token loss."""
 
@@ -202,6 +265,7 @@ class CustomSeq2SeqBEFTTrainer(CustomSeq2SeqTrainer):
         **kwargs,
     ):
         is_gt_passage = inputs.pop("is_gt_passage", None)
+        batch_idx = inputs.pop("batch_idx", None)
         labels = inputs["labels"]
         return_hidden_states = self.prior_head is not None
         outputs = model(
@@ -210,7 +274,6 @@ class CustomSeq2SeqBEFTTrainer(CustomSeq2SeqTrainer):
             use_cache=False,
             output_hidden_states=return_hidden_states,
         )
-        token_logps, _ = get_answer_token_logps(outputs.logits, labels)
 
         prior_logits = None
         if self.prior_head is not None:
@@ -221,19 +284,17 @@ class CustomSeq2SeqBEFTTrainer(CustomSeq2SeqTrainer):
             )
             prior_logits = self.prior_head(hidden_at_pre_label)
 
-        beft_loss, posterior_logprobs, prior_logprobs = compute_beft_loss(token_logps, prior_logits)
-        prior_loss = beft_loss.new_zeros(())
-        if self.finetuning_args.beft_use_prior_head_loss and prior_logits is not None and is_gt_passage is not None:
-            prior_targets = is_gt_passage.to(device=prior_logits.device, dtype=prior_logits.dtype).view_as(
-                prior_logits
-            )
-            if torch.any(prior_targets > 0):
-                prior_loss = (
-                    self.prior_loss_fn(prior_logits, prior_targets) * self.finetuning_args.beft_prior_loss_factor
-                )
-
-        total_loss = beft_loss + prior_loss
-        self._record_beft_metrics(beft_loss, prior_loss, total_loss, posterior_logprobs, prior_logprobs, is_gt_passage)
+        total_loss = compute_grouped_beft_loss(
+            outputs.logits,
+            labels,
+            batch_idx=batch_idx,
+            prior_logits=prior_logits,
+            is_gt_passage=is_gt_passage,
+            prior_loss_fn=self.prior_loss_fn,
+            use_prior_head_loss=self.finetuning_args.beft_use_prior_head_loss,
+            prior_loss_factor=self.finetuning_args.beft_prior_loss_factor,
+            metric_callback=self._record_beft_metrics,
+        )
         return (total_loss, outputs) if return_outputs else total_loss
 
     @override
@@ -259,4 +320,4 @@ class CustomSeq2SeqBEFTTrainer(CustomSeq2SeqTrainer):
         logger.info_rank0(f"Saved BEFT prior head to {prior_head_path}.")
 
 
-__all__ = ["CustomSeq2SeqBEFTTrainer"]
+__all__ = ["CustomSeq2SeqBEFTTrainer", "compute_grouped_beft_loss"]

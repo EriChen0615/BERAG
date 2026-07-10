@@ -12,41 +12,39 @@ finetuning_type: lora
 lora_target: all
 lora_rank: 64
 lora_alpha: 128
-
-# 0.9.5 BEFT names for the old PPL/BEFT prior-head hyperparameters.
 beft_hidden_state_offset: 4
-beft_prior_loss_factor: 1.0
+beft_prior_loss_factor: 0.0
 beft_prior_head_lr: 1.0e-6
 beft_prior_modeling: mlp_head
 beft_prior_head_num_layers: 2
 beft_prior_head_proj_dim: 1024
-beft_use_prior_head_loss: true
+beft_use_prior_head_loss: false
 
 ### dataset
 dataset: evqa_beft_k2_prior
 template: qwen3_vl_nothink
-cutoff_len: 2500
-overwrite_cache: true
+cutoff_len: 4096
+overwrite_cache: false
 media_dir: /root/
 preprocessing_num_workers: 1
 preprocessing_batch_size: 8
 dataloader_num_workers: 4
 packing: false
 neat_packing: false
-tokenized_path: /workspace/projects/BERAG/outputs/tokenized/evqa_sft_qwen_cutoff2048
+tokenized_path: /workspace/projects/BERAG/outputs/tokenized/evqa_beft_qwen_sample64000_cutoff2048
 
 ### output
-output_dir: saves/qwen3-vl-2b/lora/evqa/beft/test/beft-k2-prior-mlp-r64-bs8-epoch1-max2048
+output_dir: saves/qwen3-vl-2b/lora/evqa/beft/beft-k2-prior-mlp-r64-bs8-sample64000-max2500
 logging_steps: 10
-save_steps: 20000
+save_steps: 1000
 plot_loss: true
-overwrite_output_dir: false
+overwrite_output_dir: true
 save_only_model: false
 report_to: wandb
 
 ### train
-per_device_train_batch_size: 1
-gradient_accumulation_steps: 8
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 4
 learning_rate: 1.0e-5
 num_train_epochs: 1.0
 lr_scheduler_type: cosine
@@ -59,6 +57,4 @@ resume_from_checkpoint: null
 val_size: 64
 per_device_eval_batch_size: 1
 eval_strategy: steps
-eval_steps: 20000
-
-
+eval_steps: 1000
