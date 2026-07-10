@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-cd "${ROOT_DIR}"
+# ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+# cd "${ROOT_DIR}"
 
 HF_DATASET_PATH="${HF_DATASET_PATH:-outputs/jinghong_chen/EVQA-with-retrieval}"
 LLAMAFACTORY_DATA_DIR="${LLAMAFACTORY_DATA_DIR:-src/train/LlamaFactory-0.9.5-beft/data}"
@@ -10,7 +10,7 @@ IMG_BASEDIR="${IMG_BASEDIR:-data/EVQA}"
 
 TOPK_DOCS="${TOPK_DOCS:-2}"
 DROP_MAX_TOKENS="${DROP_MAX_TOKENS:-2048}"
-SAMPLE_SIZE="${SAMPLE_SIZE:-0}"
+SAMPLE_SIZE="${SAMPLE_SIZE:-64000}"
 SAMPLE_OFFSET="${SAMPLE_OFFSET:-0}"
 SEED="${SEED:-42}"
 NUM_WORKERS="${NUM_WORKERS:-8}"

@@ -4,4 +4,7 @@
 .venv/
 src/train/LlamaFactory-0.9.5-beft/data/EVQA/
 outputs/jinghong_chen
+outputs/tokenized
 src/train/LlamaFactory-0.9.5-beft/data/jinghong_chen/
+
+__pycache__/

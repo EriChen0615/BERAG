@@ -145,7 +145,7 @@ def add_prefix_and_form_prompt(batch, args, pid_to_content_map):
     batch_size = len(batch['img_path'])
     
     # Process image paths
-    img_paths = [f"{args.img_basedir}/{p}" for p in batch['img_path']]
+    img_paths = [f"{args.img_basedir}/{p.removeprefix('../vqa_data/KBVQA_data/EVQA/images/')}" for p in batch['img_path']]
     
     # Pre-allocate prompts list for better performance
     prompts = [''] * batch_size

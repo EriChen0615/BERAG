@@ -763,7 +763,7 @@
     "folder": "python"
   },
   "evqa_rag5_answer_sft": {
-    "file_name": "jinghong_chen/evqa/rag5-answer-sft-size=0-max=4096/train_sharegpt.json",
+    "file_name": "jinghong_chen/evqa/rag5-answer-sft-size=64000-max=4096/train_sharegpt.json",
     "formatting": "sharegpt",
     "columns": {
       "messages": "messages",
@@ -779,7 +779,7 @@
     }
   },
   "evqa_beft_k2_prior": {
-    "file_name": "jinghong_chen/evqa/beft_K=2-size=0-max=2048/train_sharegpt.json",
+    "file_name": "jinghong_chen/evqa/beft_K=2-size=64000-max=2048/train_sharegpt.json",
     "formatting": "sharegpt",
     "columns": {
       "messages": "messages",

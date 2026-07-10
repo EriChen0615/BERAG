@@ -3,29 +3,19 @@ model_name_or_path: Qwen/Qwen3-VL-2B-Instruct
 image_max_pixels: 262144
 video_max_pixels: 16384
 trust_remote_code: true
-flash_attn: fa2
 
 ### method
-stage: beft
-do_train: true
+stage: sft
+do_train: false
 finetuning_type: lora
 lora_target: all
 lora_rank: 64
 lora_alpha: 128
 
-# 0.9.5 BEFT names for the old PPL/BEFT prior-head hyperparameters.
-beft_hidden_state_offset: 4
-beft_prior_loss_factor: 1.0
-beft_prior_head_lr: 1.0e-6
-beft_prior_modeling: mlp_head
-beft_prior_head_num_layers: 2
-beft_prior_head_proj_dim: 1024
-beft_use_prior_head_loss: true
-
 ### dataset
-dataset: evqa_beft_k2_prior
+dataset: evqa_rag5_answer_sft
 template: qwen3_vl_nothink
-cutoff_len: 2500
+cutoff_len: 4096
 overwrite_cache: true
 media_dir: /root/
 preprocessing_num_workers: 1
@@ -33,14 +23,15 @@ preprocessing_batch_size: 8
 dataloader_num_workers: 4
 packing: false
 neat_packing: false
-tokenized_path: /workspace/projects/BERAG/outputs/tokenized/evqa_sft_qwen_cutoff2048
+tokenized_path: /workspace/projects/BERAG/outputs/tokenized/evqa_sft_qwen_sample64000_cutoff4096
+max_samples: 64000
 
 ### output
-output_dir: saves/qwen3-vl-2b/lora/evqa/beft/test/beft-k2-prior-mlp-r64-bs8-epoch1-max2048
+output_dir: saves/qwen3-vl-2b/lora/evqa/sft/rag5-answer-sft-r64-bs8-epoch1-max4096
 logging_steps: 10
 save_steps: 20000
 plot_loss: true
-overwrite_output_dir: false
+overwrite_output_dir: true
 save_only_model: false
 report_to: wandb
 
@@ -60,5 +51,3 @@ val_size: 64
 per_device_eval_batch_size: 1
 eval_strategy: steps
 eval_steps: 20000
-
-
