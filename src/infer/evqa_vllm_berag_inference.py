@@ -6,12 +6,14 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import os
 import sys
+import time
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -55,6 +57,12 @@ class PreparedExample:
     berag_shared_prefix: str | dict[str, Any]
     berag_suffix: str
     metadata: dict[str, Any]
+
+
+@dataclass
+class InferenceRunResult:
+    rows: list[dict[str, Any]]
+    metrics: dict[str, Any]
 
 
 def read_prompt_template(path: str | None, topk=1) -> str:
@@ -347,6 +355,158 @@ def write_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def write_json(path: str | Path, value: dict[str, Any]) -> None:
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as f:
+        json.dump(value, f, ensure_ascii=False, indent=2, sort_keys=True)
+        f.write("\n")
+
+
+def _mean(values: Sequence[float | int | None]) -> float:
+    clean_values = [float(value) for value in values if value is not None]
+    return sum(clean_values) / len(clean_values) if clean_values else 0.0
+
+
+def _percentile(values: Sequence[float | int | None], p: float) -> float:
+    clean_values = sorted(float(value) for value in values if value is not None)
+    if not clean_values:
+        return 0.0
+    if len(clean_values) == 1:
+        return clean_values[0]
+
+    rank = (len(clean_values) - 1) * (p / 100.0)
+    low = math.floor(rank)
+    high = math.ceil(rank)
+    if low == high:
+        return clean_values[low]
+    low_weight = high - rank
+    high_weight = rank - low
+    return clean_values[low] * low_weight + clean_values[high] * high_weight
+
+
+def _interval(end: Any, start: Any) -> float | None:
+    if not end or not start:
+        return None
+    return max(0.0, float(end) - float(start))
+
+
+def _output_token_ids(output: Any | None) -> list[int]:
+    if output is None:
+        return []
+    outputs = getattr(output, "outputs", None) or []
+    if not outputs:
+        return []
+    return [int(token_id) for token_id in (getattr(outputs[0], "token_ids", None) or [])]
+
+
+def _add_timing_telemetry(row: dict[str, Any], output: Any | None) -> None:
+    output_token_ids = _output_token_ids(output)
+    output_tokens = len(output_token_ids)
+    prompt_token_ids = getattr(output, "prompt_token_ids", None) if output is not None else None
+    metrics = getattr(output, "metrics", None) if output is not None else None
+    outputs = getattr(output, "outputs", None) or []
+    completion = outputs[0] if outputs else None
+
+    ttft_s = None
+    queued_s = None
+    prefill_s = None
+    decode_s = None
+    tpot_s = None
+    if metrics is not None:
+        ttft_s = float(getattr(metrics, "first_token_latency", 0.0) or 0.0)
+        queued_s = _interval(
+            getattr(metrics, "scheduled_ts", 0.0),
+            getattr(metrics, "queued_ts", 0.0),
+        )
+        prefill_s = _interval(
+            getattr(metrics, "first_token_ts", 0.0),
+            getattr(metrics, "scheduled_ts", 0.0),
+        )
+        decode_s = _interval(
+            getattr(metrics, "last_token_ts", 0.0),
+            getattr(metrics, "first_token_ts", 0.0),
+        )
+        if decode_s is not None:
+            tpot_s = decode_s / (output_tokens - 1) if output_tokens > 1 else 0.0
+
+    row.update(
+        {
+            "prompt_tokens": len(prompt_token_ids) if prompt_token_ids is not None else None,
+            "output_tokens": output_tokens,
+            "ttft_s": ttft_s,
+            "queued_s": queued_s,
+            "prefill_s": prefill_s,
+            "decode_s": decode_s,
+            "tpot_s": tpot_s,
+            "finished": bool(getattr(output, "finished", False)) if output is not None else False,
+            "finish_reason": getattr(completion, "finish_reason", None),
+        }
+    )
+
+
+def _merge_numeric_timing(
+    totals: dict[str, float],
+    timing: dict[str, Any],
+    keys: Sequence[str],
+) -> None:
+    for key in keys:
+        value = timing.get(key)
+        if isinstance(value, (int, float)):
+            totals[key] = totals.get(key, 0.0) + float(value)
+
+
+def _aggregate_run_metrics(
+    rows: Sequence[dict[str, Any]],
+    *,
+    args: argparse.Namespace,
+    vllm_run_wall_time_s: float,
+    num_request_batches: int,
+    berag_timing_totals: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    ok_rows = [row for row in rows if row.get("status") == "ok"]
+    timed_rows = [row for row in ok_rows if row.get("ttft_s") is not None]
+    metrics: dict[str, Any] = {
+        "mode": args.mode,
+        "status": "ok" if len(ok_rows) == len(rows) else "partial",
+        "num_requests": len(rows),
+        "num_ok": len(ok_rows),
+        "num_failed": len(rows) - len(ok_rows),
+        "num_timed": len(timed_rows),
+        "num_request_batches": num_request_batches,
+        "batch_size": args.batch_size,
+        "retrieval_topk": args.retrieval_topk,
+        "max_tokens": args.max_tokens,
+        "vllm_run_wall_time_s": vllm_run_wall_time_s,
+        "requests_per_second": (
+            len(ok_rows) / vllm_run_wall_time_s
+            if vllm_run_wall_time_s > 0
+            else 0.0
+        ),
+        "mean_prompt_tokens": _mean([row.get("prompt_tokens") for row in ok_rows]),
+        "mean_output_tokens": _mean([row.get("output_tokens") for row in ok_rows]),
+        "p50_ttft_s": _percentile([row.get("ttft_s") for row in timed_rows], 50),
+        "p90_ttft_s": _percentile([row.get("ttft_s") for row in timed_rows], 90),
+        "p50_tpot_s": _percentile([row.get("tpot_s") for row in timed_rows], 50),
+        "p90_tpot_s": _percentile([row.get("tpot_s") for row in timed_rows], 90),
+        "p50_prefill_s": _percentile([row.get("prefill_s") for row in timed_rows], 50),
+        "p90_prefill_s": _percentile([row.get("prefill_s") for row in timed_rows], 90),
+        "p50_decode_s": _percentile([row.get("decode_s") for row in timed_rows], 50),
+        "p90_decode_s": _percentile([row.get("decode_s") for row in timed_rows], 90),
+    }
+    if args.mode == "berag" and berag_timing_totals is not None:
+        metrics.update(
+            {
+                "berag_generate_total_s": berag_timing_totals.get("total_s"),
+                "berag_admission_s": berag_timing_totals.get("admission_s"),
+                "berag_run_engine_s": berag_timing_totals.get("run_engine_s"),
+                "berag_num_parent_requests": berag_timing_totals.get("num_parent_requests"),
+                "berag_num_child_requests": berag_timing_totals.get("num_child_requests"),
+            }
+        )
+    return metrics
+
+
 def _response_from_output(output: Any | None) -> str | None:
     if output is None:
         return None
@@ -478,6 +638,7 @@ def build_output_row(
             ),
         }
     )
+    _add_timing_telemetry(row, output)
     if args.mode == "berag":
         _add_berag_telemetry(row, example, output)
     return row
@@ -488,14 +649,30 @@ def iter_batches(items: list[Any], batch_size: int) -> Iterable[list[Any]]:
         yield items[start : start + batch_size]
 
 
-def run_inference(examples: list[PreparedExample], args: argparse.Namespace) -> list[dict[str, Any]]:
+def run_inference(examples: list[PreparedExample], args: argparse.Namespace) -> InferenceRunResult:
     if args.dry_run:
-        return [build_output_row(example, args, None, "dry_run") for example in examples]
+        rows = [build_output_row(example, args, None, "dry_run") for example in examples]
+        return InferenceRunResult(
+            rows=rows,
+            metrics=_aggregate_run_metrics(
+                rows,
+                args=args,
+                vllm_run_wall_time_s=0.0,
+                num_request_batches=0,
+            ),
+        )
 
     llm = make_llm(args)
     sampling_params = make_sampling_params(args)
+    berag_params = make_berag_params(args) if args.mode == "berag" else None
     rows: list[dict[str, Any]] = []
+    vllm_run_wall_time_s = 0.0
+    num_request_batches = 0
+    berag_timing_totals: dict[str, float] = {}
+
     for batch in iter_batches(examples, args.batch_size):
+        call_start = time.perf_counter()
+        call_measured = False
         try:
             if args.mode == "rag":
                 outputs = llm.generate(
@@ -509,21 +686,47 @@ def run_inference(examples: list[PreparedExample], args: argparse.Namespace) -> 
                     [example.documents for example in batch],
                     [example.berag_suffix for example in batch],
                     sampling_params,
-                    berag_params=make_berag_params(args),
+                    berag_params=berag_params,
                     request_id=[example.question_id for example in batch],
                     use_tqdm=not args.disable_tqdm,
                     debug=args.debug,
                 )
+            vllm_run_wall_time_s += time.perf_counter() - call_start
+            num_request_batches += 1
+            call_measured = True
+            if args.mode == "berag":
+                _merge_numeric_timing(
+                    berag_timing_totals,
+                    getattr(llm, "_last_berag_timing", {}) or {},
+                    (
+                        "total_s",
+                        "admission_s",
+                        "run_engine_s",
+                        "num_parent_requests",
+                        "num_child_requests",
+                    ),
+                )
             for example, output in zip(batch, outputs, strict=True):
                 rows.append(build_output_row(example, args, output, "ok"))
         except Exception as exc:
+            if not call_measured:
+                vllm_run_wall_time_s += time.perf_counter() - call_start
+                num_request_batches += 1
             if args.stop_on_error:
                 raise
             error = "".join(traceback.format_exception_only(type(exc), exc)).strip()
             logger.exception("Inference batch failed; writing error rows.")
             for example in batch:
                 rows.append(build_output_row(example, args, None, "error", error=error))
-    return rows
+
+    metrics = _aggregate_run_metrics(
+        rows,
+        args=args,
+        vllm_run_wall_time_s=vllm_run_wall_time_s,
+        num_request_batches=num_request_batches,
+        berag_timing_totals=berag_timing_totals if args.mode == "berag" else None,
+    )
+    return InferenceRunResult(rows=rows, metrics=metrics)
 
 
 def load_dataset_rows(args: argparse.Namespace) -> list[dict[str, Any]]:
@@ -564,6 +767,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--img-basedir", default="")
     parser.add_argument("--prompt-template", default=None)
     parser.add_argument("--output-path", required=True)
+    parser.add_argument("--metrics-output-path", default=None)
     parser.add_argument("--take-n", type=int, default=-1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-words-per-evidence", type=int, default=1024)
@@ -614,9 +818,27 @@ def main() -> None:
     rows = load_dataset_rows(args)
     examples = [prepare_example(row, args, tokenizer, prompt_template, pid_to_content_map) for row in rows]
     logger.info("Prepared %d EVQA examples for %s inference.", len(examples), args.mode)
-    output_rows = run_inference(examples, args)
-    write_jsonl(args.output_path, output_rows)
-    logger.info("Wrote %d rows to %s.", len(output_rows), args.output_path)
+    result = run_inference(examples, args)
+    write_jsonl(args.output_path, result.rows)
+    metrics_path = (
+        Path(args.metrics_output_path)
+        if args.metrics_output_path
+        else Path(args.output_path).with_name("run_metrics.json")
+    )
+    write_json(metrics_path, result.metrics)
+    logger.info("Wrote %d rows to %s.", len(result.rows), args.output_path)
+    logger.info("Wrote vLLM timing metrics to %s.", metrics_path)
+    logger.info(
+        "vLLM timing: mode=%s requests=%d wall_time=%.3fs "
+        "p50_ttft=%.4fs p90_ttft=%.4fs p50_tpot=%.4fs p90_tpot=%.4fs",
+        result.metrics.get("mode"),
+        result.metrics.get("num_ok", 0),
+        result.metrics.get("vllm_run_wall_time_s", 0.0),
+        result.metrics.get("p50_ttft_s", 0.0),
+        result.metrics.get("p90_ttft_s", 0.0),
+        result.metrics.get("p50_tpot_s", 0.0),
+        result.metrics.get("p90_tpot_s", 0.0),
+    )
 
 
 if __name__ == "__main__":
