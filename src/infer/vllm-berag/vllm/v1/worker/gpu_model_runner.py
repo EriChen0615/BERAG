@@ -1178,7 +1178,7 @@ class GPUModelRunner(
             raise ValueError("BERAG requires prior_module_cls.")
         if not self.berag_config.prior_module_weights_path:
             raise ValueError("BERAG requires prior_module_weights_path.")
-        cls = resolve_obj_by_qualname(self.berag_config.prior_module_cls)
+        cls = resolve_objsrc/train/LlamaFactory-0.9.5-beft/my_configs/evqa/tokenize_data_by_qualname(self.berag_config.prior_module_cls)
         module = cls(**self.berag_config.prior_module_kwargs)
         state = torch.load(
             self.berag_config.prior_module_weights_path,

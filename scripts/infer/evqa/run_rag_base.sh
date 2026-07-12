@@ -4,13 +4,12 @@ set -euo pipefail
 REPO_ROOT="${REPO_ROOT:-/workspace/projects/BERAG}"
 export PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}"
 
-MODEL="${MODEL:-/workspace/projects/BERAG/outputs/jinghong_chen/Qwen3-VL-8B-Instruct-SFT-EVQA64000}"
+MODEL="${MODEL:-Qwen/Qwen3-VL-8B-Instruct}"
 TOKENIZER_PATH="${TOKENIZER_PATH:-Qwen/Qwen3-VL-8B-Instruct}"
 RETRIEVAL_DS_PATH="${RETRIEVAL_DS_PATH:-/workspace/projects/BERAG/outputs/jinghong_chen/PreFLMR-L_post_retrieval}"
 IMG_BASEDIR="${IMG_BASEDIR:-/workspace/projects/BERAG/src/train/LlamaFactory-0.9.5-beft/data/EVQA}"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/infer/evqa}"
-# K_VALUES="${K_VALUES:-${RETRIEVAL_TOPK:-1,2,3,5,10,15,20,30}}"
-K_VALUES="${K_VALUES:-${RETRIEVAL_TOPK:-40,50}}"
+K_VALUES="${K_VALUES:-${RETRIEVAL_TOPK:-1,2,3,5,10,15,20,30,40,50}}"
 
 K_VALUES="${K_VALUES//,/ }"
 read -r -a K_ARRAY <<< "${K_VALUES}"
@@ -26,7 +25,7 @@ for RETRIEVAL_TOPK in "${K_ARRAY[@]}"; do
         EXP_NAME="${EXP_NAME}-TakeN=${TAKE_N}"
     fi
 
-    EXP_DIR="${OUTPUT_DIR}/rag/${EXP_NAME}"
+    EXP_DIR="${OUTPUT_DIR}/rag-base/${EXP_NAME}"
     OUTPUT_PATH="${EXP_DIR}/predictions.jsonl"
     mkdir -p "${EXP_DIR}"
 
@@ -45,7 +44,7 @@ for RETRIEVAL_TOPK in "${K_ARRAY[@]}"; do
         --output-path "${OUTPUT_PATH}"   \
         --batch-size "${BATCH_SIZE:-64}"   \
         --max-model-len "${MAX_MODEL_LEN:-65536}"  \
-        --max-tokens "${MAX_TOKENS:-64}"   \
+        --max-tokens "${MAX_TOKENS:-32}"   \
         --dtype "${DTYPE:-bfloat16}"   \
         --tensor-parallel-size "${TENSOR_PARALLEL_SIZE:-1}"   \
         --gpu-memory-utilization "${GPU_MEMORY_UTILIZATION:-0.9}"   \

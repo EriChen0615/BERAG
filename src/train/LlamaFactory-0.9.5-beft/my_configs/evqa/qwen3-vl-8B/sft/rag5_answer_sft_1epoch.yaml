@@ -17,16 +17,16 @@ dataset: evqa_rag5_answer_sft
 template: qwen3_vl_nothink
 cutoff_len: 4096
 overwrite_cache: false
-media_dir: /root/
-preprocessing_num_workers: 4
+media_dir: /workspace/projects/BERAG/src/train/LlamaFactory-0.9.5-beft/
+preprocessing_num_workers: 1
 preprocessing_batch_size: 8
 dataloader_num_workers: 4
 packing: false
 neat_packing: false
-tokenized_path: /workspace/projects/BERAG/outputs/tokenized/evqa_sft_qwen_sample64000_cutoff4096
+tokenized_path: /workspace/projects/BERAG/outputs/tokenized/evqa_sft_qwen_full_cutoff4096
 
 ### output
-output_dir: saves/qwen3-vl-8b/lora/evqa/sft/rag5-answer-sft-r64-bs8-sample64000-max4096
+output_dir: saves/qwen3-vl-8b/lora/evqa/sft/rag5-answer-sft-r64-bs8-epoch1-max4096
 logging_steps: 10
 save_steps: 1000
 plot_loss: true
@@ -36,7 +36,7 @@ report_to: wandb
 
 ### train
 per_device_train_batch_size: 2
-gradient_accumulation_steps: 4
+gradient_accumulation_steps: 1
 learning_rate: 1.0e-5
 num_train_epochs: 1.0
 lr_scheduler_type: cosine

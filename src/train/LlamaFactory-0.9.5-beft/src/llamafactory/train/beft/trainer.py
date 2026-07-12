@@ -16,7 +16,9 @@
 # limitations under the License.
 
 import os
+import sys
 from collections import defaultdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 import torch
@@ -37,6 +39,23 @@ if TYPE_CHECKING:
 logger = logging.get_logger(__name__)
 
 
+def _find_berag_src_root() -> Path | None:
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "beft_prior_head.py").is_file():
+            return parent
+    return None
+
+
+try:
+    from beft_prior_head import build_beft_prior_head
+except ModuleNotFoundError:
+    _BERAG_SRC_ROOT = _find_berag_src_root()
+    if _BERAG_SRC_ROOT is None:
+        raise
+    sys.path.insert(0, str(_BERAG_SRC_ROOT))
+    from beft_prior_head import build_beft_prior_head
+
+
 def _infer_hidden_size(model: "torch.nn.Module") -> int:
     config = getattr(model, "config", None)
     for candidate_config in (config, getattr(config, "text_config", None), getattr(config, "llm_config", None)):
@@ -51,23 +70,12 @@ def _build_prior_head(finetuning_args: "FinetuningArguments", hidden_size: int) 
     if finetuning_args.beft_prior_modeling == "none":
         return None
 
-    if finetuning_args.beft_prior_modeling == "linear_head":
-        return nn.Linear(hidden_size, 1)
-
-    if finetuning_args.beft_prior_modeling == "mlp_head":
-        num_layers = max(1, finetuning_args.beft_prior_head_num_layers)
-        proj_dim = finetuning_args.beft_prior_head_proj_dim or hidden_size
-        layers = []
-        input_dim = hidden_size
-        for _ in range(num_layers - 1):
-            layers.append(nn.Linear(input_dim, proj_dim))
-            layers.append(nn.ReLU())
-            input_dim = proj_dim
-
-        layers.append(nn.Linear(input_dim, 1))
-        return nn.Sequential(*layers)
-
-    raise ValueError(f"Unknown BEFT prior modeling type: {finetuning_args.beft_prior_modeling}.")
+    return build_beft_prior_head(
+        hidden_size,
+        prior_modeling=finetuning_args.beft_prior_modeling,
+        num_layers=finetuning_args.beft_prior_head_num_layers,
+        proj_dim=finetuning_args.beft_prior_head_proj_dim,
+    )
 
 
 def compute_grouped_beft_loss(

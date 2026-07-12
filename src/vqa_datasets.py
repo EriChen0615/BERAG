@@ -79,7 +79,13 @@ def load_passages(dataset_name, split='test'):
         EVQA_PASSAGE_DS = load_dataset("BByrneLab/multi_task_multi_modal_knowledge_retrieval_benchmark_M2KR", "EVQA_passages", split=f"{split}_passages")
         print(f"Using BByrneLab/multi_task_multi_modal_knowledge_retrieval_benchmark_M2KR EVQA. Split={split}")
         print("Size of passage set = ", len(EVQA_PASSAGE_DS))
-        pid_to_content_map = {item['passage_id']: item['passage_content'] for item in EVQA_PASSAGE_DS}
+        # pid_to_content_map = {item['passage_id']: item['passage_content'] for item in EVQA_PASSAGE_DS}
+        pid_to_content_map = dict(
+            zip(
+                EVQA_PASSAGE_DS["passage_id"],
+                EVQA_PASSAGE_DS["passage_content"],
+            )
+        )
         return EVQA_PASSAGE_DS, pid_to_content_map
     elif dataset_name == 'OKVQA':
         OKVQA_PASSAGE_DS = load_dataset("BByrneLab/multi_task_multi_modal_knowledge_retrieval_benchmark_M2KR", "OKVQA_passages", split=f"{split}_passages")

@@ -30,7 +30,14 @@ DEFAULT_PROMPT_TEMPLATE = (
     "Give your answer after [ANSWER] without explanations\n"
     "[EVIDENCE] <<<EVIDENCE>>>"
 )
+PARAMETRIC_PROMPT_TEMPLATE = (
+    "Answer the question after [QUESTION] about the image."
+    "Use your parametric knowledge to answer the question. <<<EVIDENCE>>>"
+    "Give your answer after [ANSWER] without explanations\n" 
+)
 DEFAULT_PRIOR_MODULE_CLS = "infer.beft_prior.BeftPriorHead"
+EMPTY_DOCUMENT_PASSAGE_ID = "empty_document"
+EMPTY_DOCUMENT_TEXT = " "
 
 
 @dataclass
@@ -50,9 +57,11 @@ class PreparedExample:
     metadata: dict[str, Any]
 
 
-def read_prompt_template(path: str | None) -> str:
-    if path is None:
+def read_prompt_template(path: str | None, topk=1) -> str:
+    if path is None and topk != 0:
         return DEFAULT_PROMPT_TEMPLATE
+    elif path is None and topk == 0:
+        return PARAMETRIC_PROMPT_TEMPLATE
     return Path(path).read_text(encoding="utf-8")
 
 
@@ -92,6 +101,8 @@ def make_evidence_document(
     max_words_per_evidence: int,
 ) -> str:
     passage_id = str(passage_dict["passage_id"])
+    if passage_id == EMPTY_DOCUMENT_PASSAGE_ID:
+        return EMPTY_DOCUMENT_TEXT
     text = pid_to_content_map.get(passage_id) or passage_dict.get("passage_content") or ""
     words = str(text).split()
     if max_words_per_evidence > 0:
@@ -101,11 +112,11 @@ def make_evidence_document(
 
 def make_rag_user_prompt(prompt_template: str, documents: list[str], question: str) -> str:
     evidence = " ".join(documents)
-    return prompt_template.replace(EVIDENCE_SENTINEL, evidence) + f"\n[QUESTION] {question}\n[ANSWER]"
+    return prompt_template.replace(EVIDENCE_SENTINEL, evidence) + f"\n[QUESTION] {question}\n"
 
 
 def make_berag_user_prompt_with_sentinel(prompt_template: str, question: str) -> str:
-    return prompt_template + f"\n[QUESTION] {question}\n[ANSWER]"
+    return prompt_template + f"\n[QUESTION] {question}\n"
 
 
 def split_rendered_berag_prompt(
@@ -149,6 +160,14 @@ def load_image(image_path: str) -> Any:
 
 
 def select_retrieved_passages(row: dict[str, Any], args: argparse.Namespace) -> list[dict[str, Any]]:
+    if args.retrieval_topk == 0:
+        return [
+            {
+                "passage_id": EMPTY_DOCUMENT_PASSAGE_ID,
+                "passage_content": EMPTY_DOCUMENT_TEXT,
+            }
+        ]
+
     retrieved = [dict(item) for item in row[args.retrieval_field][: args.retrieval_topk]]
     if not retrieved:
         raise ValueError(f"No retrieved passages for question_id={row.get('question_id')}.")
@@ -164,6 +183,14 @@ def select_retrieved_passages(row: dict[str, Any], args: argparse.Namespace) -> 
                 score_field: 1.0,
             }
     return retrieved
+
+
+def _first_item_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, (list, tuple)):
+        return str(value[0]) if value else None
+    return str(value)
 
 
 def prepare_example(
@@ -182,6 +209,12 @@ def prepare_example(
         for item in retrieved_passages
     ]
     retrieved_passage_ids = [str(item["passage_id"]) for item in retrieved_passages]
+    gt_passage_id = _first_item_text(row.get("pos_item_ids"))
+    gt_passage_in_zidx = (
+        retrieved_passage_ids.index(gt_passage_id)
+        if gt_passage_id in retrieved_passage_ids
+        else -1
+    )
 
     rag_user_prompt = make_rag_user_prompt(prompt_template, documents, row["question"])
     rag_prompt = render_chat_prompt(tokenizer, rag_user_prompt, include_image=image is not None)
@@ -199,6 +232,8 @@ def prepare_example(
         "retrieval_field": args.retrieval_field,
         "retrieval_topk": args.retrieval_topk,
         "retrieved_passage_ids": retrieved_passage_ids,
+        "gt_passage_id": gt_passage_id,
+        "gt_passage_in_zidx": gt_passage_in_zidx,
         "image_path": image_path,
     }
     return PreparedExample(
@@ -239,12 +274,6 @@ def resolve_hidden_size(args: argparse.Namespace) -> int:
     raise ValueError("Could not infer hidden_size. Pass --prior-hidden-size.")
 
 
-def ensure_vllm_berag_import_path(args: argparse.Namespace) -> None:
-    vllm_path = Path(args.vllm_berag_path).resolve()
-    if str(vllm_path) not in sys.path:
-        sys.path.insert(0, str(vllm_path))
-
-
 def make_sampling_params(args: argparse.Namespace) -> Any:
     from vllm import SamplingParams
 
@@ -264,7 +293,7 @@ def make_berag_params(args: argparse.Namespace) -> Any:
 
 
 def make_llm(args: argparse.Namespace) -> Any:
-    ensure_vllm_berag_import_path(args)
+    # ensure_vllm_berag_import_path(args)
     from vllm import LLM
 
     llm_kwargs: dict[str, Any] = {
@@ -275,6 +304,8 @@ def make_llm(args: argparse.Namespace) -> Any:
         "max_model_len": args.max_model_len,
         "gpu_memory_utilization": args.gpu_memory_utilization,
         "tensor_parallel_size": args.tensor_parallel_size,
+        "async_scheduling": False,
+        "disable_log_stats": False,
         "limit_mm_per_prompt": {"image": 1},
     }
     if args.max_num_seqs is not None:
@@ -316,13 +347,116 @@ def write_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def _response_from_output(output: Any | None) -> str | None:
+    if output is None:
+        return None
+    outputs = getattr(output, "outputs", None) or []
+    return outputs[0].text if outputs else ""
+
+
+def _branch_id_to_passage_id(
+    retrieved_passage_ids: list[str], branch_id: Any
+) -> str | None:
+    if branch_id is None:
+        return None
+    try:
+        idx = int(branch_id)
+    except (TypeError, ValueError):
+        return None
+    if 0 <= idx < len(retrieved_passage_ids):
+        return retrieved_passage_ids[idx]
+    return None
+
+
+def _as_branch_id_list(value: Any) -> list[int]:
+    if not isinstance(value, list):
+        return []
+    branch_ids = []
+    for item in value:
+        try:
+            branch_ids.append(int(item))
+        except (TypeError, ValueError):
+            continue
+    return branch_ids
+
+
+def _add_berag_telemetry(
+    row: dict[str, Any], example: PreparedExample, output: Any | None
+) -> None:
+    berag_info = getattr(output, "berag_info", None) if output is not None else None
+    if not isinstance(berag_info, dict):
+        return
+
+    retrieved_passage_ids = example.retrieved_passage_ids
+    prior_idx = berag_info.get("prior_max_branch_id")
+    posterior_idx = berag_info.get("posterior_max_branch_id")
+    prior_sorted_indices = _as_branch_id_list(
+        berag_info.get("prior_sorted_branch_ids")
+    )
+    posterior_sorted_indices = _as_branch_id_list(
+        berag_info.get("posterior_sorted_branch_ids")
+    )
+    prior_sorted_passage_ids = [
+        passage_id
+        for idx in prior_sorted_indices
+        if (passage_id := _branch_id_to_passage_id(retrieved_passage_ids, idx))
+        is not None
+    ]
+    posterior_sorted_passage_ids = [
+        passage_id
+        for idx in posterior_sorted_indices
+        if (passage_id := _branch_id_to_passage_id(retrieved_passage_ids, idx))
+        is not None
+    ]
+    prior_top_passage_id = _branch_id_to_passage_id(retrieved_passage_ids, prior_idx)
+    posterior_top_passage_id = _branch_id_to_passage_id(
+        retrieved_passage_ids, posterior_idx
+    )
+    gt_passage_id = row.get("gt_passage_id")
+    prior_hit = (
+        prior_top_passage_id == gt_passage_id
+        if gt_passage_id and prior_top_passage_id is not None
+        else None
+    )
+    posterior_hit = (
+        posterior_top_passage_id == gt_passage_id
+        if gt_passage_id and posterior_top_passage_id is not None
+        else None
+    )
+
+    row.update(
+        {
+            "berag_log_prior": berag_info.get("log_prior_by_branch"),
+            "berag_log_posterior": berag_info.get("log_posterior_by_branch"),
+            "berag_prior_max_idx": prior_idx,
+            "berag_posterior_max_idx": posterior_idx,
+            "berag_prior_sorted_indices": prior_sorted_indices,
+            "berag_posterior_sorted_indices": posterior_sorted_indices,
+            "berag_prior_sorted_passage_ids": prior_sorted_passage_ids,
+            "berag_posterior_sorted_passage_ids": posterior_sorted_passage_ids,
+            "berag_prior_top_passage_id": prior_top_passage_id,
+            "berag_posterior_top_passage_id": posterior_top_passage_id,
+            "prior_hit": prior_hit,
+            "posterior_hit": posterior_hit,
+            "prior_max_idx": int(prior_idx) if prior_idx is not None else -1,
+            "prior_sorted_passage_ids": prior_sorted_passage_ids,
+            "prior_passage_is_gt": bool(prior_hit),
+            "z_dominant_idx": int(posterior_idx)
+            if posterior_idx is not None
+            else -1,
+            "dominant_passage_is_gt": bool(posterior_hit),
+        }
+    )
+
+
 def build_output_row(
     example: PreparedExample,
     args: argparse.Namespace,
-    response: str | None,
+    output: Any | None,
     status: str,
     error: str | None = None,
 ) -> dict[str, Any]:
+    response = _response_from_output(output)
     row = dict(example.metadata)
     row.update(
         {
@@ -344,6 +478,8 @@ def build_output_row(
             ),
         }
     )
+    if args.mode == "berag":
+        _add_berag_telemetry(row, example, output)
     return row
 
 
@@ -379,8 +515,7 @@ def run_inference(examples: list[PreparedExample], args: argparse.Namespace) -> 
                     debug=args.debug,
                 )
             for example, output in zip(batch, outputs, strict=True):
-                response = output.outputs[0].text if output.outputs else ""
-                rows.append(build_output_row(example, args, response, "ok"))
+                rows.append(build_output_row(example, args, output, "ok"))
         except Exception as exc:
             if args.stop_on_error:
                 raise
@@ -392,11 +527,22 @@ def run_inference(examples: list[PreparedExample], args: argparse.Namespace) -> 
 
 
 def load_dataset_rows(args: argparse.Namespace) -> list[dict[str, Any]]:
+    print(f"Loading dataset at {args.retrieval_ds_path}")
     from datasets import load_from_disk
 
     dataset = load_from_disk(args.retrieval_ds_path)
     if args.take_n > 0:
         dataset = dataset.shuffle(seed=args.seed).select(range(min(args.take_n, len(dataset))))
+
+    if args.dataset_name == 'EVQA':
+        prefix = "../vqa_data/KBVQA_data/EVQA/images//"
+
+        dataset = dataset.map(
+            lambda example: {
+                "img_path": example["img_path"].removeprefix(prefix)
+            }
+        )
+
     return [dict(row) for row in dataset]
 
 
@@ -427,7 +573,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--model", required=True)
     parser.add_argument("--tokenizer-path", default=None)
-    parser.add_argument("--vllm-berag-path", default=str(REPO_ROOT / "src" / "infer" / "vllm-berag"))
+    # parser.add_argument("--vllm-berag-path", default=str(REPO_ROOT / "src" / "infer" / "vllm-berag"))
     parser.add_argument("--trust-remote-code", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--dtype", default="bfloat16")
     parser.add_argument("--max-model-len", type=int, default=32768)
@@ -461,7 +607,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     args = parse_args()
     validate_args(args)
-    prompt_template = read_prompt_template(args.prompt_template)
+    prompt_template = read_prompt_template(args.prompt_template, args.retrieval_topk)
     split_prompt_template(prompt_template)
     tokenizer = load_tokenizer(args)
     _, pid_to_content_map = load_passages(args.dataset_name, split="test")

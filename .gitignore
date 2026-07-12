@@ -5,6 +5,10 @@
 src/train/LlamaFactory-0.9.5-beft/data/EVQA/
 outputs/jinghong_chen
 outputs/tokenized
+outputs/infer
 src/train/LlamaFactory-0.9.5-beft/data/jinghong_chen/
+src/eval/.venv
+src/eval/models
+
 
 __pycache__/
