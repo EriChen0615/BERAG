@@ -140,12 +140,86 @@ def _truncate_passage_content(passage_content, max_word_count=MAX_PASSAGE_WORD_C
         return passage_content
     return ' '.join(words[:max_word_count])
 
-def add_prefix_and_form_prompt(batch, args, pid_to_content_map):
+
+def normalize_passage_id(passage_id):
+    return str(passage_id)
+
+
+def build_pid_to_title_map(passage_ds):
+    if 'title' not in passage_ds.column_names:
+        return {}
+    return {
+        passage_id: title
+        for passage_id, title in zip(passage_ds['passage_id'], passage_ds['title'])
+    }
+
+
+def iter_retrieved_passage_window(retrieved_passages, lookup_depth):
+    if lookup_depth is None or lookup_depth <= 0:
+        return retrieved_passages
+    return retrieved_passages[:lookup_depth]
+
+
+def collect_infoseek_retrieved_chunk_ids(ds, lookup_depth):
+    chunk_ids = set()
+    for row in tqdm(ds, desc="Collecting Infoseek retrieved chunk IDs"):
+        for passage in iter_retrieved_passage_window(row['retrieved_passage'], lookup_depth):
+            chunk_ids.add(normalize_passage_id(passage['passage_id']))
+    return chunk_ids
+
+
+def build_infoseek_requested_chunk_to_full_document_map(ds, requested_chunk_ids):
+    chunk_to_full_document_id = {}
+    requested_chunk_ids = set(requested_chunk_ids)
+    for row in tqdm(ds, desc="Resolving Infoseek chunk IDs to full-document QIDs"):
+        entity_id = row['entity_id']
+        for chunk_id in row['related_item_ids']:
+            chunk_id = normalize_passage_id(chunk_id)
+            if chunk_id in requested_chunk_ids and chunk_id not in chunk_to_full_document_id:
+                chunk_to_full_document_id[chunk_id] = entity_id
+    return chunk_to_full_document_id
+
+
+def map_infoseek_retrieved_chunks_to_full_documents(retrieved_passages, chunk_to_full_document_id, topk_docs, lookup_depth):
+    passages = []
+    seen_document_ids = set()
+    for passage in iter_retrieved_passage_window(retrieved_passages, lookup_depth):
+        full_document_id = chunk_to_full_document_id.get(normalize_passage_id(passage['passage_id']))
+        if full_document_id is None or full_document_id in seen_document_ids:
+            continue
+        passages.append({
+            'passage_id': full_document_id,
+            'score': passage['score'],
+        })
+        seen_document_ids.add(full_document_id)
+        if len(passages) >= topk_docs:
+            break
+    return passages
+
+
+def resolve_image_path(img_path, args):
+    if args.img_path_mode == 'basename':
+        return os.path.join(args.img_basedir, os.path.basename(img_path))
+    return f"{args.img_basedir}/{img_path.removeprefix('../vqa_data/KBVQA_data/EVQA/images/')}"
+
+
+def format_passage(passage, pid_to_content_map, pid_to_title_map):
+    passage_id = passage['passage_id']
+    title = pid_to_title_map.get(passage_id, passage_id)
+    content = _truncate_passage_content(pid_to_content_map[passage_id])
+    return f"Title: {title}\tContent: {content}"
+
+
+def add_prefix_and_form_prompt(batch, args, pid_to_content_map, pid_to_title_map=None, chunk_to_full_document_id=None):
     """Process a batch of data efficiently using HuggingFace batched processing"""
+    if pid_to_title_map is None:
+        pid_to_title_map = {}
+    if args.map_infoseek_chunks_to_full_documents and chunk_to_full_document_id is None:
+        raise ValueError("chunk_to_full_document_id is required when mapping Infoseek chunks to full documents")
     batch_size = len(batch['img_path'])
     
     # Process image paths
-    img_paths = [f"{args.img_basedir}/{p.removeprefix('../vqa_data/KBVQA_data/EVQA/images/')}" for p in batch['img_path']]
+    img_paths = [resolve_image_path(p, args) for p in batch['img_path']]
     
     # Pre-allocate prompts list for better performance
     prompts = [''] * batch_size
@@ -156,8 +230,17 @@ def add_prefix_and_form_prompt(batch, args, pid_to_content_map):
     
     # Process each item in the batch
     for idx in range(batch_size):
-        gt_passage_id = batch['pos_item_ids'][idx][0]
-        original_ret_passages = batch['retrieved_passage'][idx][:args.topk_docs]
+        if args.map_infoseek_chunks_to_full_documents:
+            gt_passage_id = batch['entity_id'][idx]
+            original_ret_passages = map_infoseek_retrieved_chunks_to_full_documents(
+                batch['retrieved_passage'][idx],
+                chunk_to_full_document_id,
+                args.topk_docs,
+                args.infoseek_retrieved_chunk_lookup_depth,
+            )
+        else:
+            gt_passage_id = batch['pos_item_ids'][idx][0]
+            original_ret_passages = batch['retrieved_passage'][idx][:args.topk_docs]
 
         if args.random_sample_1passage_from_topk:
             if gt_passage_id in [p['passage_id'] for p in original_ret_passages]:
@@ -172,7 +255,7 @@ def add_prefix_and_form_prompt(batch, args, pid_to_content_map):
         if args.ensure_gt_passage_in_topk and gt_passage_id not in [p['passage_id'] for p in passages]: # if gt passage is not in the retrieved passage set, add it.
             gt_passage_dict = {
                 'passage_id': gt_passage_id,
-                'score': np.min([p['score'] for p in passages])
+                'score': np.min([p['score'] for p in passages]) if passages else 0.0
             }
             passages = [gt_passage_dict] + passages[:args.topk_docs-1]
 
@@ -184,9 +267,9 @@ def add_prefix_and_form_prompt(batch, args, pid_to_content_map):
 
         # Format passages based on passage_format argument
         if args.passage_format == 'dict':
-            passage_contents = [{"text": f"Title: {p['passage_id']}\tContent: {_truncate_passage_content(pid_to_content_map[p['passage_id']])}"} for p in passages]
+            passage_contents = [{"text": format_passage(p, pid_to_content_map, pid_to_title_map)} for p in passages]
         else:
-            passage_contents = [f"Title: {p['passage_id']}\tContent: {_truncate_passage_content(pid_to_content_map[p['passage_id']])}" for p in passages]
+            passage_contents = [format_passage(p, pid_to_content_map, pid_to_title_map) for p in passages]
         passage_scores = [p['score'] for p in passages]
 
         question_part = f"\n[QUESTION] {batch['question'][idx]}"
@@ -297,6 +380,9 @@ if __name__ == "__main__":
     parser.add_argument("--bepo_mode", type=str, default='find_wrong_from_all_responses')
     parser.add_argument("--add_deflection", action='store_true', help='Add deflection labels: 1 if no GT passage, 0 otherwise')
     parser.add_argument("--passage_format", type=str, default='text', choices=['text', 'dict'], help='Format for passages: text (string) or dict (with "text" key)')
+    parser.add_argument("--img_path_mode", type=str, default='legacy', choices=['legacy', 'basename'], help='How to resolve image paths under img_basedir')
+    parser.add_argument("--map_infoseek_chunks_to_full_documents", action='store_true', help='Map Infoseek chunk retrieval IDs to InfoseekNew full-document QIDs via related_item_ids -> entity_id')
+    parser.add_argument("--infoseek_retrieved_chunk_lookup_depth", type=int, default=50, help='Number of retrieved Infoseek chunks per example to resolve before deduping to topk_docs; <=0 resolves all retrieved chunks')
     args = parser.parse_args()
 
     print("Loading dataset...")
@@ -307,8 +393,25 @@ if __name__ == "__main__":
     print(f"Dataset loaded with {len(ds)} items")
 
     print("Loading passages...")
-    _, pid_to_content_map = load_passages(args.passage_set_name, split='train')
+    passage_ds, pid_to_content_map = load_passages(args.passage_set_name, split='train')
+    pid_to_title_map = build_pid_to_title_map(passage_ds)
+    chunk_to_full_document_id = None
     print(f"Loaded {len(pid_to_content_map)} passages")
+
+    if args.map_infoseek_chunks_to_full_documents:
+        if args.passage_set_name != 'InfoseekNew_FullPassage':
+            raise ValueError("--map_infoseek_chunks_to_full_documents expects --passage_set_name InfoseekNew_FullPassage")
+        required_columns = {'entity_id', 'related_item_ids'}
+        missing_columns = required_columns - set(ds.column_names)
+        if missing_columns:
+            raise ValueError(f"Infoseek chunk mapping requires columns: {sorted(missing_columns)}")
+        requested_chunk_ids = collect_infoseek_retrieved_chunk_ids(ds, args.infoseek_retrieved_chunk_lookup_depth)
+        chunk_to_full_document_id = build_infoseek_requested_chunk_to_full_document_map(ds, requested_chunk_ids)
+        print(
+            "Mapped "
+            f"{len(chunk_to_full_document_id)} / {len(requested_chunk_ids)} requested Infoseek chunks "
+            "to InfoseekNew full-document QIDs"
+        )
 
     if args.mode == 'bepo' and args.model_sample_filepath is not None:
         print(f"Loading base model samples from {args.model_sample_filepath}...")
@@ -379,7 +482,7 @@ if __name__ == "__main__":
     # Only keep the specified fields in the dataset
     # For SFT mode, keep: 'img_path', 'prompt', 'gold_answer'
     # For DPO mode, keep: 'img_path', 'answer_input', 'chosen_answer_target', 'rejected_answer_target'
-    keep_fields = ['question_id', 'img_path', 'prompt', 'gold_answer', 'retrieved_passage', 'pos_item_ids', 'question']
+    keep_fields = ['question_id', 'img_path', 'prompt', 'gold_answer', 'retrieved_passage', 'pos_item_ids', 'question', 'entity_id']
 
     ds = ds.remove_columns([col for col in ds.column_names if col not in keep_fields])
     
@@ -388,7 +491,13 @@ if __name__ == "__main__":
     
     # Create a partial function with the required arguments
     if args.mode == 'sft':
-        process_func = partial(add_prefix_and_form_prompt, args=args, pid_to_content_map=pid_to_content_map)
+        process_func = partial(
+            add_prefix_and_form_prompt,
+            args=args,
+            pid_to_content_map=pid_to_content_map,
+            pid_to_title_map=pid_to_title_map,
+            chunk_to_full_document_id=chunk_to_full_document_id,
+        )
     elif args.mode == 'bepo':
         process_func = partial(add_prefix_and_form_prompt_bepo, args=args, pid_to_content_map=pid_to_content_map, qid_to_pairs_info_map=qid_to_pairs_info_map)
         

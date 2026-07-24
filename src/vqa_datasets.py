@@ -74,6 +74,14 @@ def load_vqa_dataset(dataset_name, split='test', img_basedir='data/', take_n=-1,
     else:
         raise NotImplementedError(f"{dataset_name} not implemented!")
 
+def _resolve_jingbiao_aravqa_split(split):
+    if split in {'train', 'train_passages'}:
+        return 'train'
+    if split in {'valid', 'validation', 'val', 'valid_passages', 'validation_passages', 'test', 'test_passages'}:
+        return 'validation'
+    return split.removesuffix('_passages')
+
+
 def load_passages(dataset_name, split='test'):
     if dataset_name == 'EVQA': 
         EVQA_PASSAGE_DS = load_dataset("BByrneLab/multi_task_multi_modal_knowledge_retrieval_benchmark_M2KR", "EVQA_passages", split=f"{split}_passages")
@@ -100,28 +108,15 @@ def load_passages(dataset_name, split='test'):
         pid_to_content_map = {item['passage_id']: item['passage_content'] for item in Infoseek_passage_ds}
         return Infoseek_passage_ds, pid_to_content_map
     elif dataset_name == 'InfoseekNew':
-        Infoseek_passage_ds = load_dataset("Jingbiao/aravqa", "Infoseek_passages", split=f"{split}_passages")
-        print(f"Using Jingbiao/aravqa InfoseekNew. Split={split}")
+        resolved_split = _resolve_jingbiao_aravqa_split(split)
+        Infoseek_passage_ds = load_dataset("Jingbiao/aravqa", data_dir="Infoseek_passages", split=resolved_split)
+        print(f"Using Jingbiao/aravqa InfoseekNew. Split={resolved_split}")
         print("Size of passage set = ", len(Infoseek_passage_ds))
         pid_to_content_map = {item['passage_id']: item['passage_content'] for item in Infoseek_passage_ds}
         return Infoseek_passage_ds, pid_to_content_map
     elif dataset_name == 'InfoseekNew_FullPassage':
-        requested_split = f"{split}_passages"
-        try:
-            Infoseek_passage_ds = load_dataset("Jingbiao/aravqa", "InfoseekFull_passages", split=requested_split)
-            resolved_split = requested_split
-        except ValueError as e:
-            # Some cached variants expose only train/valid passage splits.
-            if split == "test" and "Unknown split" in str(e):
-                fallback_split = "valid_passages"
-                print(
-                    f"[load_passages] Requested split '{requested_split}' not available for "
-                    f"InfoseekFull_passages; falling back to '{fallback_split}'."
-                )
-                Infoseek_passage_ds = load_dataset("Jingbiao/aravqa", "InfoseekFull_passages", split=fallback_split)
-                resolved_split = fallback_split
-            else:
-                raise
+        resolved_split = _resolve_jingbiao_aravqa_split(split)
+        Infoseek_passage_ds = load_dataset("Jingbiao/aravqa", data_dir="InfoseekFull_passages", split=resolved_split)
         print(f"Using Jingbiao/aravqa Infoseek Full Passages. Split={resolved_split}")
         print("Size of passage set = ", len(Infoseek_passage_ds))
         pid_to_content_map = {item['passage_id']: item['passage_content'] for item in Infoseek_passage_ds}

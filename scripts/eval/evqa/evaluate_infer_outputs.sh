@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-/workspace/projects/BERAG}"
-BASE_DIR="${BASE_DIR:-${REPO_ROOT}/outputs/infer/evqa}"
+BASE_DIR="${BASE_DIR:-${REPO_ROOT}/outputs/infer/evqa_full}"
 EVAL_EXPERIMENTS_SCRIPT="${EVAL_EXPERIMENTS_SCRIPT:-${REPO_ROOT}/scripts/eval/evqa/evaluate_experiments.sh}"
 PREDICTIONS_FILENAME="${PREDICTIONS_FILENAME:-predictions.jsonl}"
 SCORES_FILENAME="${SCORES_FILENAME:-score.json}"

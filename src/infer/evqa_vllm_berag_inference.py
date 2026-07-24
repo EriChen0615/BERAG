@@ -355,6 +355,44 @@ def write_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def append_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.exists() and output_path.stat().st_size > 0:
+        with output_path.open("rb+") as f:
+            f.seek(-1, os.SEEK_END)
+            if f.read(1) != b"\n":
+                f.write(b"\n")
+    with output_path.open("a", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+
+
+def read_jsonl(path: str | Path) -> list[dict[str, Any]]:
+    input_path = Path(path)
+    rows = []
+    if not input_path.exists():
+        return rows
+
+    with input_path.open("r", encoding="utf-8") as f:
+        for line_num, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                logger.warning("Skipping malformed JSONL line %d in %s.", line_num, input_path)
+                continue
+            if isinstance(row, dict):
+                rows.append(row)
+            else:
+                logger.warning("Skipping non-object JSONL line %d in %s.", line_num, input_path)
+    return rows
+
+
 def write_json(path: str | Path, value: dict[str, Any]) -> None:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -652,6 +690,8 @@ def iter_batches(items: list[Any], batch_size: int) -> Iterable[list[Any]]:
 def run_inference(examples: list[PreparedExample], args: argparse.Namespace) -> InferenceRunResult:
     if args.dry_run:
         rows = [build_output_row(example, args, None, "dry_run") for example in examples]
+        if args.write_on_batch_complete:
+            append_jsonl(args.output_path, rows)
         return InferenceRunResult(
             rows=rows,
             metrics=_aggregate_run_metrics(
@@ -706,8 +746,13 @@ def run_inference(examples: list[PreparedExample], args: argparse.Namespace) -> 
                         "num_child_requests",
                     ),
                 )
-            for example, output in zip(batch, outputs, strict=True):
-                rows.append(build_output_row(example, args, output, "ok"))
+            batch_rows = [
+                build_output_row(example, args, output, "ok")
+                for example, output in zip(batch, outputs, strict=True)
+            ]
+            rows.extend(batch_rows)
+            if args.write_on_batch_complete:
+                append_jsonl(args.output_path, batch_rows)
         except Exception as exc:
             if not call_measured:
                 vllm_run_wall_time_s += time.perf_counter() - call_start
@@ -716,8 +761,13 @@ def run_inference(examples: list[PreparedExample], args: argparse.Namespace) -> 
                 raise
             error = "".join(traceback.format_exception_only(type(exc), exc)).strip()
             logger.exception("Inference batch failed; writing error rows.")
-            for example in batch:
-                rows.append(build_output_row(example, args, None, "error", error=error))
+            batch_rows = [
+                build_output_row(example, args, None, "error", error=error)
+                for example in batch
+            ]
+            rows.extend(batch_rows)
+            if args.write_on_batch_complete:
+                append_jsonl(args.output_path, batch_rows)
 
     metrics = _aggregate_run_metrics(
         rows,
@@ -768,6 +818,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prompt-template", default=None)
     parser.add_argument("--output-path", required=True)
     parser.add_argument("--metrics-output-path", default=None)
+    parser.add_argument("--write-on-batch-complete", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--resume-from-jsonl", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--take-n", type=int, default=-1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-words-per-evidence", type=int, default=1024)
@@ -815,18 +867,66 @@ def main() -> None:
     split_prompt_template(prompt_template)
     tokenizer = load_tokenizer(args)
     _, pid_to_content_map = load_passages(args.dataset_name, split="test")
+    existing_rows = read_jsonl(args.output_path) if args.resume_from_jsonl else []
+    completed_question_ids = {
+        str(row["question_id"])
+        for row in existing_rows
+        if row.get("question_id") is not None
+    }
+    if args.write_on_batch_complete and not args.resume_from_jsonl:
+        write_jsonl(args.output_path, [])
+
     rows = load_dataset_rows(args)
+    if completed_question_ids:
+        first_pending_idx = next(
+            (
+                idx
+                for idx, row in enumerate(rows)
+                if str(row.get("question_id")) not in completed_question_ids
+            ),
+            len(rows),
+        )
+        rows = [
+            row
+            for row in rows
+            if str(row.get("question_id")) not in completed_question_ids
+        ]
+        logger.info(
+            "Resuming from %s: loaded %d generated rows; first pending dataset index is %d.",
+            args.output_path,
+            len(existing_rows),
+            first_pending_idx,
+        )
+
     examples = [prepare_example(row, args, tokenizer, prompt_template, pid_to_content_map) for row in rows]
     logger.info("Prepared %d EVQA examples for %s inference.", len(examples), args.mode)
-    result = run_inference(examples, args)
-    write_jsonl(args.output_path, result.rows)
+    if examples:
+        result = run_inference(examples, args)
+    else:
+        result = InferenceRunResult(
+            rows=[],
+            metrics=_aggregate_run_metrics(
+                [],
+                args=args,
+                vllm_run_wall_time_s=0.0,
+                num_request_batches=0,
+            ),
+        )
+    output_rows = existing_rows + result.rows
+    if not args.write_on_batch_complete:
+        write_jsonl(args.output_path, output_rows)
     metrics_path = (
         Path(args.metrics_output_path)
         if args.metrics_output_path
         else Path(args.output_path).with_name("run_metrics.json")
     )
     write_json(metrics_path, result.metrics)
-    logger.info("Wrote %d rows to %s.", len(result.rows), args.output_path)
+    logger.info(
+        "Output JSONL at %s has %d total rows; %d rows generated in this run.",
+        args.output_path,
+        len(output_rows),
+        len(result.rows),
+    )
     logger.info("Wrote vLLM timing metrics to %s.", metrics_path)
     logger.info(
         "vLLM timing: mode=%s requests=%d wall_time=%.3fs "

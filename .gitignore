@@ -3,6 +3,7 @@
 *.zip
 .venv/
 src/train/LlamaFactory-0.9.5-beft/data/EVQA/
+src/train/LlamaFactory-0.9.5-beft/data/Infoseek/
 outputs/jinghong_chen
 outputs/tokenized
 outputs/infer
