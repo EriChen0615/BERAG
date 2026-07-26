@@ -1,0 +1,62 @@
+### model
+model_name_or_path: Qwen/Qwen3-VL-8B-Instruct
+image_max_pixels: 262144
+video_max_pixels: 16384
+trust_remote_code: true
+flash_attn: fa2
+use_unsloth: true
+
+### method
+stage: beft
+do_train: false
+finetuning_type: lora
+lora_target: all
+lora_rank: 64
+lora_alpha: 128
+beft_hidden_state_offset: 4
+beft_prior_loss_factor: 0.0
+beft_prior_head_lr: 1.0e-6
+beft_prior_modeling: mlp_head
+beft_prior_head_num_layers: 2
+beft_prior_head_proj_dim: 1024
+beft_use_prior_head_loss: false
+
+### dataset
+dataset: infoseek_beft_k2_max32k
+template: qwen3_vl_nothink
+cutoff_len: 35000
+overwrite_cache: true
+media_dir: /workspace/projects/BERAG/
+preprocessing_num_workers: 1
+preprocessing_batch_size: 8
+dataloader_num_workers: 8
+packing: false
+neat_packing: false
+tokenized_path: /workspace/projects/BERAG/outputs/tokenized/infoseek_beft_qwen_sample64000
+
+### output
+output_dir: saves/qwen3-vl-8b/lora/infoseek/beft/beft-k2-prior-mlp-r64-bs8-sample64000
+logging_steps: 10
+save_steps: 1000
+plot_loss: true
+overwrite_output_dir: false
+save_only_model: false
+report_to: wandb
+run_name: qwen3-vl-8b-infoseek-beft-k2-64000
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 8
+learning_rate: 1.0e-5
+num_train_epochs: 1.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+ddp_timeout: 180000000
+resume_from_checkpoint: null
+
+### eval
+val_size: 64
+per_device_eval_batch_size: 1
+eval_strategy: steps
+eval_steps: 1000

@@ -1,6 +1,6 @@
 import sys
 sys.path.append('./src')
-from datasets import load_from_disk
+from datasets import Dataset, concatenate_datasets, load_from_disk
 from vqa_datasets import load_passages
 import argparse
 import json
@@ -12,6 +12,7 @@ import gc
 import numpy as np
 import pandas as pd
 import ast
+import hashlib
 import random
 from collections import defaultdict
 
@@ -33,75 +34,90 @@ VLM_PROMPT_FOR_PRIOR = (
 
 MAX_PASSAGE_WORD_COUNT = 2048
 IMG_TOKEN_COUNTS = 400 # (512/28)^2 approx 400
+PSEUDO_DOCUMENT_TEXT = "Title: Retrieval failed\tContent: retrieval failed, use your own knowledge"
+PSEUDO_DOCUMENT_SCORE = -1e9
 
-def convert_to_sharegpt_format(dataset, output_dir, mode='sft'):
+def _normalize_passages_for_json(passages, passage_format):
+    if not passages:
+        return passages
+
+    if isinstance(passages[0], dict):
+        normalized_passages = []
+        for idx, p in enumerate(passages):
+            if "text" not in p:
+                raise ValueError(f"Passage at index {idx} is a dict but missing 'text' key. Passage: {p}")
+            if not isinstance(p["text"], str):
+                raise TypeError(
+                    f"Passage at index {idx} has 'text' key but value is not a string. "
+                    f"Got type: {type(p['text'])}, value: {p['text']}"
+                )
+            normalized_passages.append(p)
+        return normalized_passages
+
+    if passage_format == 'dict':
+        return [{"text": str(p)} for p in passages]
+    return passages
+
+
+def convert_to_sharegpt_format(dataset, output_dir, mode='sft', output_style='beft', args=None):
     """
     Convert dataset items to ShareGPT format and save as a JSON file.
-    Args:
-        dataset: HuggingFace dataset with processed items.
-        output_path: Path to save the ShareGPT formatted JSON.
+
+    output_style='beft' keeps passages/gt_passage_idx as top-level BEFT fields
+    and leaves <<<EVIDENCE>>> in the prompt for the BEFT processor.
+
+    output_style='inline_sft' writes ordinary SFT rows: evidence text is already
+    concatenated into the user turn and no top-level BEFT passage fields are kept.
     """
     sharegpt_data = []
-    print(f"Convert to sharegpt format for {mode} training...")
-    
-    # Process dataset directly without converting to list
+    passage_format = getattr(args, 'passage_format', 'text')
+    add_deflection = bool(getattr(args, 'add_deflection', False))
+    add_separate_prompt_for_prior = bool(getattr(args, 'add_separate_prompt_for_prior', False))
+    print(f"Convert to sharegpt format for {mode} training with output_style={output_style}...")
+
     for item in tqdm(dataset, desc="Converting to ShareGPT format"):
         if mode == 'sft':
-            # Validate and normalize passages format
-            passages = item['passages']
-            if passages:
-                # Check if passages are in dict format
-                if isinstance(passages[0], dict):
-                    # Ensure all passages are dicts with 'text' key
-                    normalized_passages = []
-                    for idx, p in enumerate(passages):
-                        if isinstance(p, dict):
-                            if "text" not in p:
-                                raise ValueError(f"Passage at index {idx} is a dict but missing 'text' key. Passage: {p}")
-                            if not isinstance(p["text"], str):
-                                raise TypeError(f"Passage at index {idx} has 'text' key but value is not a string. Got type: {type(p['text'])}, value: {p['text']}")
-                            normalized_passages.append(p)
-                        else:
-                            # Convert non-dict to dict format
-                            normalized_passages.append({"text": str(p)})
-                    passages = normalized_passages
-                else:
-                    # Passages are strings, convert to dict format if needed
-                    if args.passage_format == 'dict':
-                        passages = [{"text": str(p)} for p in passages]
-                    # Otherwise keep as strings
-            
             conversation = {
                 "messages": [
                     {
-                        "content": f"<image> {item['prompt']}", 
+                        "content": f"<image> {item['prompt']}",
                         "role": "user"
                     },
                     {
-                        "content": f"[ANSWER] {item['gold_answer']}", 
+                        "content": f"[ANSWER] {item['gold_answer']}",
                         "role": "assistant"
                     }
                 ],
                 "images": [item['img_path']],
-                "gt_passage_idx": item['gt_passage_idx'],
-                "passages": passages,
-                "passage_scores": item['passage_scores']
             }
-            if args.add_deflection:
-                conversation['deflection'] = item.get('deflection', 0)
-            if args.add_separate_prompt_for_prior:
-                conversation['prior_prompt'] = [
-                    {
-                        "content": f"<image> {item['prior_prompt'].replace('<<<QUESTION>>>', item['question'])}",
-                        "role": "user"
-                    },
-                ]
+
+            if output_style == 'beft':
+                passages = _normalize_passages_for_json(item['passages'], passage_format)
+                conversation.update({
+                    "gt_passage_idx": item['gt_passage_idx'],
+                    "passages": passages,
+                    "passage_scores": item['passage_scores'],
+                })
+                if add_deflection:
+                    conversation['deflection'] = item.get('deflection', 0)
+                if add_separate_prompt_for_prior:
+                    conversation['prior_prompt'] = [
+                        {
+                            "content": f"<image> {item['prior_prompt'].replace('<<<QUESTION>>>', item['question'])}",
+                            "role": "user"
+                        },
+                    ]
+            elif output_style == 'inline_sft':
+                # Ordinary SFT rows intentionally omit BEFT-only fields.
+                pass
+            else:
+                raise NotImplementedError(f"Unknown output_style={output_style}")
         elif mode == 'bepo':
             conversation = {
                 "messages": [
                     {
                         "from": "human",
-                        "value": f"<image> {item['prompt']}", 
+                        "value": f"<image> {item['prompt']}",
                     },
                 ],
                 "chosen": {
@@ -117,9 +133,9 @@ def convert_to_sharegpt_format(dataset, output_dir, mode='sft'):
                 "passages": item['passages'],
                 "passage_scores": item['passage_scores']
             }
-            if args.add_deflection:
+            if add_deflection:
                 conversation['deflection'] = item.get('deflection', 0)
-            if args.add_separate_prompt_for_prior:
+            if add_separate_prompt_for_prior:
                 conversation['prior_prompt'] = [
                     {
                         "content": f"<image> {item['prior_prompt'].replace('<<<QUESTION>>>', item['question'])}",
@@ -129,7 +145,7 @@ def convert_to_sharegpt_format(dataset, output_dir, mode='sft'):
         else:
             raise NotImplementedError(f"convert_to_sharegpt_format {mode}")
         sharegpt_data.append(conversation)
-    # Save to JSON file in ShareGPT format
+
     os.makedirs(output_dir, exist_ok=True)
     with open(os.path.join(output_dir, 'train_sharegpt.json'), 'w') as f:
         json.dump(sharegpt_data, f, ensure_ascii=False, indent=4)
@@ -202,12 +218,175 @@ def resolve_image_path(img_path, args):
         return os.path.join(args.img_basedir, os.path.basename(img_path))
     return f"{args.img_basedir}/{img_path.removeprefix('../vqa_data/KBVQA_data/EVQA/images/')}"
 
+def sanitize_reserved_media_tokens(text):
+    for token in ("<video>", "<audio>"):
+        text = text.replace(token, "")
+    return text
 
 def format_passage(passage, pid_to_content_map, pid_to_title_map):
     passage_id = passage['passage_id']
     title = pid_to_title_map.get(passage_id, passage_id)
     content = _truncate_passage_content(pid_to_content_map[passage_id])
+    content = sanitize_reserved_media_tokens(content)
     return f"Title: {title}\tContent: {content}"
+
+
+def _stable_rng(seed, *parts):
+    key = "::".join([str(seed), *[str(p) for p in parts]])
+    digest = hashlib.md5(key.encode("utf-8")).hexdigest()
+    return random.Random(int(digest[:16], 16))
+
+
+def _dedupe_passages_by_id(passages):
+    deduped = []
+    seen = set()
+    for passage in passages:
+        passage_id = passage['passage_id']
+        if passage_id in seen:
+            continue
+        seen.add(passage_id)
+        deduped.append(passage)
+    return deduped
+
+
+def _min_score(passages):
+    return float(np.min([p.get('score', 0.0) for p in passages])) if passages else 0.0
+
+
+def _get_retrieval_pool_for_row(row, args, chunk_to_full_document_id=None):
+    selection_pool_size = args.retrieval_pool_size if args.retrieval_pool_size > 0 else args.topk_docs
+    if args.map_infoseek_chunks_to_full_documents:
+        if chunk_to_full_document_id is None:
+            raise ValueError("chunk_to_full_document_id is required when mapping Infoseek chunks to full documents")
+        gt_passage_id = row['entity_id']
+        retrieved_passages = map_infoseek_retrieved_chunks_to_full_documents(
+            row['retrieved_passage'],
+            chunk_to_full_document_id,
+            selection_pool_size,
+            args.infoseek_retrieved_chunk_lookup_depth,
+        )
+    else:
+        gt_passage_id = row['pos_item_ids'][0]
+        retrieved_passages = row['retrieved_passage'][:selection_pool_size]
+
+    return gt_passage_id, _dedupe_passages_by_id(retrieved_passages)
+
+
+def _format_pseudodoc_passage(args):
+    if args.passage_format == 'dict':
+        return {"text": PSEUDO_DOCUMENT_TEXT}
+    return PSEUDO_DOCUMENT_TEXT
+
+
+def _format_passage_for_output(passage, args, pid_to_content_map, pid_to_title_map):
+    formatted = format_passage(passage, pid_to_content_map, pid_to_title_map)
+    if args.passage_format == 'dict':
+        return {"text": formatted}
+    return formatted
+
+
+def add_pseudodoc_examples(ds, args, pid_to_content_map, pid_to_title_map=None, chunk_to_full_document_id=None):
+    num_to_add = int(args.add_examples_with_pseudodocs)
+    if num_to_add <= 0:
+        return ds
+    if args.mode != 'sft' or args.output_style != 'beft':
+        raise ValueError("--add_examples_with_pseudodocs is only supported for BEFT-style SFT output")
+
+    if pid_to_title_map is None:
+        pid_to_title_map = {}
+
+    rng = _stable_rng(args.seed, 'add_examples_with_pseudodocs')
+    eligible = []
+    for row_idx in range(len(ds)):
+        row = ds[row_idx]
+        gt_passage_id, retrieved_passages = _get_retrieval_pool_for_row(row, args, chunk_to_full_document_id)
+        gt_passage_id = normalize_passage_id(gt_passage_id)
+        hard_negative_candidates = [
+            passage
+            for passage in retrieved_passages
+            if normalize_passage_id(passage['passage_id']) != gt_passage_id
+            and passage['passage_id'] in pid_to_content_map
+        ]
+        if hard_negative_candidates:
+            eligible.append((row_idx, hard_negative_candidates))
+
+    if not eligible:
+        print("No eligible rows found for pseudo-doc augmentation; no pseudo-doc examples added.")
+        return ds
+
+    rng.shuffle(eligible)
+    selected = eligible[:min(num_to_add, len(eligible))]
+    if len(selected) < num_to_add:
+        print(f"Requested {num_to_add} pseudo-doc examples, but only {len(selected)} eligible rows were found.")
+
+    pseudo_rows = []
+    for row_idx, hard_negative_candidates in selected:
+        source_row = dict(ds[row_idx])
+        row_rng = _stable_rng(args.seed, source_row.get('question_id', row_idx), 'pseudodoc_row')
+        hard_negative = row_rng.choice(hard_negative_candidates)
+        hard_negative_output = _format_passage_for_output(hard_negative, args, pid_to_content_map, pid_to_title_map)
+        pseudo_doc_output = _format_pseudodoc_passage(args)
+
+        passages = [pseudo_doc_output, hard_negative_output]
+        passage_scores = [PSEUDO_DOCUMENT_SCORE, float(hard_negative.get('score', 0.0))]
+        order = [0, 1]
+        row_rng.shuffle(order)
+        source_row['passages'] = [passages[i] for i in order]
+        source_row['passage_scores'] = [passage_scores[i] for i in order]
+        source_row['gt_passage_idx'] = order.index(0)
+        if 'deflection' in source_row:
+            source_row['deflection'] = 1
+        if args.add_separate_prompt_for_prior and 'prior_prompt' not in source_row:
+            source_row['prior_prompt'] = VLM_PROMPT_FOR_PRIOR
+        pseudo_rows.append(source_row)
+
+    pseudo_ds = Dataset.from_list(pseudo_rows, features=ds.features)
+    print(f"Adding {len(pseudo_ds)} pseudo-doc BEFT examples after {len(ds)} normal examples.")
+    return concatenate_datasets([ds, pseudo_ds])
+
+
+def select_passages(original_ret_passages, gt_passage_id, args, question_id=None):
+    original_ret_passages = _dedupe_passages_by_id(original_ret_passages)
+
+    if args.passage_selection_strategy == 'gt_plus_random_hard_negative':
+        rng = _stable_rng(args.seed, question_id or '', 'gt_plus_random_hard_negative')
+        gt_passage = None
+        hard_negative_candidates = []
+        for passage in original_ret_passages:
+            if passage['passage_id'] == gt_passage_id:
+                gt_passage = passage
+            else:
+                hard_negative_candidates.append(passage)
+
+        if gt_passage is None:
+            gt_passage = {'passage_id': gt_passage_id, 'score': _min_score(original_ret_passages)}
+
+        if not hard_negative_candidates:
+            # The verification filter below will drop this example for hard-negative BEFT.
+            return [gt_passage]
+
+        hard_negative = rng.choice(hard_negative_candidates)
+        passages = [gt_passage, hard_negative]
+        rng.shuffle(passages)
+        return passages[:args.topk_docs]
+
+    if args.random_sample_1passage_from_topk:
+        if not original_ret_passages:
+            return []
+        candidates = [p for p in original_ret_passages if p['passage_id'] != gt_passage_id]
+        rng = _stable_rng(args.seed, question_id or '', 'random_sample_1passage_from_topk')
+        passages = [rng.choice(candidates or original_ret_passages)]
+    else:
+        passages = original_ret_passages[:args.topk_docs]
+
+    if args.ensure_gt_passage_in_topk and gt_passage_id not in [p['passage_id'] for p in passages]:
+        gt_passage_dict = {
+            'passage_id': gt_passage_id,
+            'score': _min_score(passages),
+        }
+        passages = [gt_passage_dict] + passages[:args.topk_docs-1]
+
+    return passages[:args.topk_docs]
 
 
 def add_prefix_and_form_prompt(batch, args, pid_to_content_map, pid_to_title_map=None, chunk_to_full_document_id=None):
@@ -228,36 +407,15 @@ def add_prefix_and_form_prompt(batch, args, pid_to_content_map, pid_to_title_map
     all_passage_scores = [-1] * batch_size
     all_gt_passage_idx = [-1] * batch_size
     
+    selection_pool_size = args.retrieval_pool_size if args.retrieval_pool_size > 0 else args.topk_docs
+
     # Process each item in the batch
     for idx in range(batch_size):
-        if args.map_infoseek_chunks_to_full_documents:
-            gt_passage_id = batch['entity_id'][idx]
-            original_ret_passages = map_infoseek_retrieved_chunks_to_full_documents(
-                batch['retrieved_passage'][idx],
-                chunk_to_full_document_id,
-                args.topk_docs,
-                args.infoseek_retrieved_chunk_lookup_depth,
-            )
-        else:
-            gt_passage_id = batch['pos_item_ids'][idx][0]
-            original_ret_passages = batch['retrieved_passage'][idx][:args.topk_docs]
+        row = {key: batch[key][idx] for key in batch}
+        gt_passage_id, original_ret_passages = _get_retrieval_pool_for_row(row, args, chunk_to_full_document_id)
 
-        if args.random_sample_1passage_from_topk:
-            if gt_passage_id in [p['passage_id'] for p in original_ret_passages]:
-                gt_passage_idx = [p['passage_id'] for p in original_ret_passages].index(gt_passage_id)
-                candidates = original_ret_passages[:gt_passage_idx] + original_ret_passages[gt_passage_idx+1:]
-                passages = [random.choice(candidates)]
-            else:
-                passages = [random.choice(original_ret_passages)]
-        else:
-            passages = original_ret_passages
-
-        if args.ensure_gt_passage_in_topk and gt_passage_id not in [p['passage_id'] for p in passages]: # if gt passage is not in the retrieved passage set, add it.
-            gt_passage_dict = {
-                'passage_id': gt_passage_id,
-                'score': np.min([p['score'] for p in passages]) if passages else 0.0
-            }
-            passages = [gt_passage_dict] + passages[:args.topk_docs-1]
+        question_id = batch.get('question_id', [None] * batch_size)[idx]
+        passages = select_passages(original_ret_passages, gt_passage_id, args, question_id=question_id)
 
         retrieved_passage_ids = [p['passage_id'] for p in passages]
         if gt_passage_id in retrieved_passage_ids:
@@ -273,7 +431,12 @@ def add_prefix_and_form_prompt(batch, args, pid_to_content_map, pid_to_title_map
         passage_scores = [p['score'] for p in passages]
 
         question_part = f"\n[QUESTION] {batch['question'][idx]}"
-        prompt = VLM_PROMPT_FOR_VQA + question_part
+        if args.output_style == 'inline_sft':
+            passage_texts = [p['text'] if isinstance(p, dict) else str(p) for p in passage_contents]
+            evidence_text = "\n\n".join(passage_texts)
+            prompt = VLM_PROMPT_FOR_VQA.replace('<<<EVIDENCE>>>', evidence_text) + question_part
+        else:
+            prompt = VLM_PROMPT_FOR_VQA + question_part
 
         prompts[idx] = prompt
         all_passage_contents[idx] = passage_contents
@@ -337,7 +500,12 @@ def add_prefix_and_form_prompt_bepo(batch, args, pid_to_content_map, qid_to_pair
         passage_scores = [p['score'] for p in passages]
 
         question_part = f"\n[QUESTION] {batch['question'][idx]}"
-        prompt = VLM_PROMPT_FOR_VQA + question_part
+        if args.output_style == 'inline_sft':
+            passage_texts = [p['text'] if isinstance(p, dict) else str(p) for p in passage_contents]
+            evidence_text = "\n\n".join(passage_texts)
+            prompt = VLM_PROMPT_FOR_VQA.replace('<<<EVIDENCE>>>', evidence_text) + question_part
+        else:
+            prompt = VLM_PROMPT_FOR_VQA + question_part
 
         prompts[idx] = prompt
         all_passage_contents[idx] = passage_contents
@@ -360,14 +528,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--hf_dataset_path", type=str, required=True, help='Must have `retrieved_passage` field')
     parser.add_argument("--passage_set_name", type=str, help='Used to load passages from hf dataset. [EVQA, InfoseekNew_FullPassage, etc.]')
-    parser.add_argument("--mode", type=str, default='sft', choices=['sft', 'bepo'])
+    parser.add_argument("--mode", type=str, default='sft', choices=['sft', 'bepo'], help="Answer target format. Use --output_style to choose BEFT-style passages vs ordinary inline SFT rows.")
+    parser.add_argument("--output_style", type=str, default='beft', choices=['beft', 'inline_sft'], help="beft keeps top-level passages and <<<EVIDENCE>>> for BEFT training; inline_sft concatenates selected evidence into the user turn for ordinary SFT.")
     parser.add_argument("--img_basedir", type=str, default=None)
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--sample_size", type=int, default=0)
     parser.add_argument("--sample_offset", type=int, default=0)
     parser.add_argument("--report_token_length", action='store_true')
     parser.add_argument("--drop_max_tokens", type=int, default=0)
+    parser.add_argument("--count_all_passages_for_token_filter", action="store_true", help="When token filtering, count all retrieved passages joined together instead of only the longest passage. Useful for full-document top-k InfoSeek curation.")
     parser.add_argument("--topk_docs", type=int, default=5)
+    parser.add_argument("--retrieval_pool_size", type=int, default=0, help="Number of retrieved documents to consider before selecting final topk_docs; 0 uses topk_docs.")
+    parser.add_argument("--passage_selection_strategy", type=str, default='topk', choices=['topk', 'gt_plus_random_hard_negative'], help="How to select final passages from the retrieval pool. gt_plus_random_hard_negative creates a K=2 pair with GT plus one random non-GT document from the pool.")
     parser.add_argument("--random_sample_1passage_from_topk", action='store_true')
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--num_workers", type=int, default=8, help='Number of workers for parallel processing')
@@ -383,6 +555,7 @@ if __name__ == "__main__":
     parser.add_argument("--img_path_mode", type=str, default='legacy', choices=['legacy', 'basename'], help='How to resolve image paths under img_basedir')
     parser.add_argument("--map_infoseek_chunks_to_full_documents", action='store_true', help='Map Infoseek chunk retrieval IDs to InfoseekNew full-document QIDs via related_item_ids -> entity_id')
     parser.add_argument("--infoseek_retrieved_chunk_lookup_depth", type=int, default=50, help='Number of retrieved Infoseek chunks per example to resolve before deduping to topk_docs; <=0 resolves all retrieved chunks')
+    parser.add_argument("--add_examples_with_pseudodocs", type=int, default=0, help="Append this many BEFT examples with a pseudo-doc marked as GT plus one random non-GT document from the retrieval pool.")
     args = parser.parse_args()
 
     print("Loading dataset...")
@@ -523,6 +696,37 @@ if __name__ == "__main__":
         desc="Processing batches",
         load_from_cache_file=False  # Disable caching for fresh processing
     )
+
+    if args.passage_selection_strategy == 'gt_plus_random_hard_negative':
+        print("Verifying hard-negative BEFT pairs: exactly topk_docs passages and GT present...")
+        before_count = len(ds)
+
+        def keep_valid_hard_negative_pair(batch):
+            keep = []
+            for passages, gt_idx in zip(batch['passages'], batch['gt_passage_idx']):
+                if isinstance(gt_idx, list):
+                    has_gt = any(int(i) != -1 for i in gt_idx)
+                else:
+                    has_gt = int(gt_idx) != -1
+                keep.append(len(passages) == args.topk_docs and has_gt)
+            return keep
+
+        ds = ds.filter(
+            keep_valid_hard_negative_pair,
+            batched=True,
+            batch_size=args.batch_size,
+            num_proc=args.num_workers,
+            desc="Filtering valid hard-negative pairs",
+        )
+        print(f"Hard-negative pair filtering: kept {len(ds)} / {before_count}; dropped {before_count - len(ds)}")
+
+    ds = add_pseudodoc_examples(
+        ds,
+        args,
+        pid_to_content_map,
+        pid_to_title_map=pid_to_title_map,
+        chunk_to_full_document_id=chunk_to_full_document_id,
+    )
     
     # Free memory from passages
     del pid_to_content_map
@@ -541,34 +745,39 @@ if __name__ == "__main__":
         def count_tokens_for_example(example):
             """Count tokens for a single example"""
             if args.mode in ['sft', 'bepo']:
-                # For SFT mode, count tokens in the full conversation
-                # Handle both text and dict formats for passages
-                passages = example['passages']
-                passage_texts = []
-                for p in passages:
-                    if isinstance(p, dict):
-                        if "text" not in p:
-                            raise ValueError(f"Passage is a dict but missing 'text' key. Passage: {p}")
-                        text = p["text"]
-                        if not isinstance(text, str):
-                            raise TypeError(f"Passage has 'text' key but value is not a string. Got type: {type(text)}, value: {text}")
-                        passage_texts.append(text)
+                if args.mode == 'sft' and args.output_style == 'inline_sft':
+                    user_content = example['prompt']
+                else:
+                    # BEFT-style rows keep evidence outside the user turn, so approximate
+                    # the maximum/full expanded context by substituting passage text here.
+                    passages = example['passages']
+                    passage_texts = []
+                    for p in passages:
+                        if isinstance(p, dict):
+                            if "text" not in p:
+                                raise ValueError(f"Passage is a dict but missing 'text' key. Passage: {p}")
+                            text = p["text"]
+                            if not isinstance(text, str):
+                                raise TypeError(f"Passage has 'text' key but value is not a string. Got type: {type(text)}, value: {text}")
+                            passage_texts.append(text)
+                        else:
+                            passage_texts.append(str(p))
+                    
+                    if not passage_texts:
+                        raise ValueError("No passages found in example")
+                    
+                    if args.count_all_passages_for_token_filter:
+                        passage_text = "\n\n".join(passage_texts)
                     else:
-                        # If it's not a dict, convert to string
-                        passage_texts.append(str(p))
-                
-                if not passage_texts:
-                    raise ValueError("No passages found in example")
-                
-                passage_lengths = [len(text) for text in passage_texts]
-                max_len_passage_idx = np.argmax(passage_lengths)
-                passage_text = passage_texts[max_len_passage_idx]
-                
-                # Ensure passage_text is a string before using replace
-                if not isinstance(passage_text, str):
-                    raise TypeError(f"passage_text is not a string. Got type: {type(passage_text)}, value: {passage_text}")
-                
-                user_content = example['prompt'].replace('<<<EVIDENCE>>>', passage_text)
+                        passage_lengths = [len(text) for text in passage_texts]
+                        max_len_passage_idx = np.argmax(passage_lengths)
+                        passage_text = passage_texts[max_len_passage_idx]
+                    
+                    if not isinstance(passage_text, str):
+                        raise TypeError(f"passage_text is not a string. Got type: {type(passage_text)}, value: {passage_text}")
+                    
+                    user_content = example['prompt'].replace('<<<EVIDENCE>>>', passage_text)
+
                 assistant_content = f"[ANSWER] {example['gold_answer']}"
                 full_text = user_content + assistant_content
             else:
@@ -616,7 +825,7 @@ if __name__ == "__main__":
         ds = ds_filtered
 
     print("Converting to ShareGPT format...")
-    convert_to_sharegpt_format(ds, args.output_dir, mode=args.mode)
+    convert_to_sharegpt_format(ds, args.output_dir, mode=args.mode, output_style=args.output_style, args=args)
     print(f"Processing complete! Output saved to {args.output_dir}")
 
     

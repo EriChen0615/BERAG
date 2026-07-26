@@ -1,3 +1,5 @@
+import json
+import os
 from datasets import load_dataset, load_from_disk
 
 def load_vqa_dataset(dataset_name, split='test', img_basedir='data/', take_n=-1, seed=0):
@@ -74,6 +76,55 @@ def load_vqa_dataset(dataset_name, split='test', img_basedir='data/', take_n=-1,
     else:
         raise NotImplementedError(f"{dataset_name} not implemented!")
 
+def _reconstruct_echosight_article(entry):
+    title = str(entry.get('title') or '')
+    section_titles = entry.get('section_titles') or []
+    section_texts = entry.get('section_texts') or []
+    pieces = []
+    if title:
+        pieces.append(title)
+    for sec_title, sec_text in zip(section_titles, section_texts):
+        sec_title = str(sec_title or '').strip()
+        sec_text = str(sec_text or '').strip()
+        if sec_title:
+            pieces.append(sec_title)
+        if sec_text:
+            pieces.append(sec_text)
+    if not pieces:
+        pieces.append(json.dumps(entry, ensure_ascii=False))
+    return '\n'.join(pieces)
+
+
+def _load_echosight_kb_passages(kb_path):
+    with open(kb_path) as f:
+        kb_by_url = json.load(f)
+    passage_ids = []
+    titles = []
+    sources = []
+    knowledge_base_indices = []
+    pid_to_content_map = {}
+    for kb_index, entry in enumerate(kb_by_url.values()):
+        passage_id = entry['url']
+        passage_ids.append(passage_id)
+        titles.append(entry.get('title') or passage_id)
+        sources.append('echosight_kb')
+        knowledge_base_indices.append(kb_index)
+        pid_to_content_map[passage_id] = _reconstruct_echosight_article(entry)
+
+    # Keep full document text out of the Arrow Dataset. ragk_answer_ppl.py only
+    # needs passage_id/title from passage_ds; full text lives in pid_to_content_map.
+    from datasets import Dataset
+    passage_ds = Dataset.from_dict({
+        'passage_id': passage_ids,
+        'title': titles,
+        'source': sources,
+        'knowledge_base_index': knowledge_base_indices,
+    })
+    print(f"Using EchoSight KB passages from {kb_path}.")
+    print("Size of passage set = ", len(passage_ds))
+    return passage_ds, pid_to_content_map
+
+
 def _resolve_jingbiao_aravqa_split(split):
     if split in {'train', 'train_passages'}:
         return 'train'
@@ -83,6 +134,20 @@ def _resolve_jingbiao_aravqa_split(split):
 
 
 def load_passages(dataset_name, split='test'):
+    dataset_name_str = str(dataset_name)
+    if dataset_name_str.startswith('EchoSightKB:'):
+        return _load_echosight_kb_passages(dataset_name_str.split(':', 1)[1])
+    if dataset_name == 'EchoSightKB':
+        kb_path = os.environ.get('ECHOSIGHT_KB_PATH')
+        if not kb_path:
+            raise ValueError("Set ECHOSIGHT_KB_PATH or pass --passage_set_name EchoSightKB:/path/to/wiki_100_dict_v4.json")
+        return _load_echosight_kb_passages(kb_path)
+    if os.path.exists(str(dataset_name)):
+        passage_ds = load_from_disk(str(dataset_name))
+        print(f"Using local passage dataset from {dataset_name}.")
+        print("Size of passage set = ", len(passage_ds))
+        pid_to_content_map = {item['passage_id']: item['passage_content'] for item in passage_ds}
+        return passage_ds, pid_to_content_map
     if dataset_name == 'EVQA': 
         EVQA_PASSAGE_DS = load_dataset("BByrneLab/multi_task_multi_modal_knowledge_retrieval_benchmark_M2KR", "EVQA_passages", split=f"{split}_passages")
         print(f"Using BByrneLab/multi_task_multi_modal_knowledge_retrieval_benchmark_M2KR EVQA. Split={split}")

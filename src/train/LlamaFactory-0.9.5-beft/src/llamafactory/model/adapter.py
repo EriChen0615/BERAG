@@ -259,7 +259,7 @@ def _setup_lora_tuning(
             if finetuning_args.finetuning_type == "oft":
                 raise ValueError("Unsloth is currently not supported for OFT.")
 
-            model = get_unsloth_peft_model(model, model_args, peft_kwargs)
+            model = get_unsloth_peft_model(model, model_args, peft_kwargs, finetuning_args)
         else:
             if finetuning_args.pissa_init:
                 if finetuning_args.pissa_iter == -1:

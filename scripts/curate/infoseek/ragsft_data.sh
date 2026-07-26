@@ -23,6 +23,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-${LLAMAFACTORY_DATA_DIR}/jinghong_chen/infoseek/rag${T
     --hf_dataset_path "${HF_DATASET_PATH}" \
     --passage_set_name "InfoseekNew_FullPassage" \
     --mode "sft" \
+    --output_style "inline_sft" \
     --topk_docs "${TOPK_DOCS}" \
     --infoseek_retrieved_chunk_lookup_depth "${INFOSEEK_RETRIEVED_CHUNK_LOOKUP_DEPTH}" \
     --sample_size "${SAMPLE_SIZE}" \

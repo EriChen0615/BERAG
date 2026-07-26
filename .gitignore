@@ -4,6 +4,7 @@
 .venv/
 src/train/LlamaFactory-0.9.5-beft/data/EVQA/
 src/train/LlamaFactory-0.9.5-beft/data/Infoseek/
+src/train/LlamaFactory-0.9.5-beft/unsloth_compiled_cache/
 outputs/jinghong_chen
 outputs/tokenized
 outputs/infer

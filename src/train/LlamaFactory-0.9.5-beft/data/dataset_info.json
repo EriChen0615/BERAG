@@ -825,5 +825,69 @@
       "user_tag": "user",
       "assistant_tag": "assistant"
     }
+  },
+  "infoseek_ragsft_k2_64000_max32k": {
+    "file_name": "jinghong_chen/infoseek/echosight-rag2-inline-sft-size=64000-max=32768/train_sharegpt.json",
+    "formatting": "sharegpt",
+    "columns": {
+      "messages": "messages",
+      "images": "images",
+      "passages": "passages",
+      "gt_passage_idx": "gt_passage_idx"
+    },
+    "tags": {
+      "role_tag": "role",
+      "content_tag": "content",
+      "user_tag": "user",
+      "assistant_tag": "assistant"
+    }
+  },
+  "infoseek_ragsft_k2_max32k_test": {
+    "file_name": "jinghong_chen/infoseek/echosight-rag2-inline-sft-size=128-max=32768/train_sharegpt.json",
+    "formatting": "sharegpt",
+    "columns": {
+      "messages": "messages",
+      "images": "images",
+      "passages": "passages",
+      "gt_passage_idx":  "gt_passage_idx"
+    },
+    "tags": {
+      "role_tag": "role",
+      "content_tag": "content",
+      "user_tag": "user",
+      "assistant_tag": "assistant"
+    }
+  },
+  "infoseek_beft_k2_max32k_test": {
+    "file_name": "jinghong_chen/infoseek/echosight-rag2-hardneg-beft-size=128-max=32768/train_sharegpt.json",
+    "formatting": "sharegpt",
+    "columns": {
+      "messages": "messages",
+      "images": "images",
+      "passages": "passages",
+      "gt_passage_idx":  "gt_passage_idx"
+    },
+    "tags": {
+      "role_tag": "role",
+      "content_tag": "content",
+      "user_tag": "user",
+      "assistant_tag": "assistant"
+    }
+  },
+  "infoseek_beft_k2_max32k": {
+    "file_name": "jinghong_chen/infoseek/echosight-rag2-hardneg-beft-size=0-max=32768/train_sharegpt.json",
+    "formatting": "sharegpt",
+    "columns": {
+      "messages": "messages",
+      "images": "images",
+      "passages": "passages",
+      "gt_passage_idx":  "gt_passage_idx"
+    },
+    "tags": {
+      "role_tag": "role",
+      "content_tag": "content",
+      "user_tag": "user",
+      "assistant_tag": "assistant"
+    }
   }
 }

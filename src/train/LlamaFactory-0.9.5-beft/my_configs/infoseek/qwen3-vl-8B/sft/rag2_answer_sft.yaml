@@ -1,0 +1,55 @@
+### model
+model_name_or_path: Qwen/Qwen3-VL-8B-Instruct
+image_max_pixels: 262144
+video_max_pixels: 16384
+trust_remote_code: true
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_target: all
+lora_rank: 64
+lora_alpha: 128
+flash_attn: fa2
+use_unsloth: true
+
+### dataset
+dataset: infoseek_ragsft_k2_64000_max32k
+template: qwen3_vl_nothink
+cutoff_len: 35000
+overwrite_cache: false
+media_dir: /workspace/projects/BERAG/
+preprocessing_num_workers: 1
+preprocessing_batch_size: 8
+dataloader_num_workers: 4
+packing: false
+neat_packing: false
+tokenized_path: /workspace/projects/BERAG/outputs/tokenized/infoseek_sft_rag2_qwen_sample64000_cutoff35k
+
+### output
+output_dir: saves/qwen3-vl-8b/lora/infoseek/sft/rag2-answer-sft-r64-bs8-64000-max35k
+logging_steps: 10
+save_steps: 1000
+plot_loss: true
+overwrite_output_dir: true
+save_only_model: false
+report_to: wandb
+run_name: qwen3-vl-8b-infoseek-ragsft-topk2
+
+### train
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 4
+learning_rate: 1.0e-5
+num_train_epochs: 1.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+ddp_timeout: 180000000
+resume_from_checkpoint: null
+
+### eval
+val_size: 64
+per_device_eval_batch_size: 1
+eval_strategy: steps
+eval_steps: 2000
