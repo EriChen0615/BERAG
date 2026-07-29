@@ -11,6 +11,7 @@ outputs/infer
 src/train/LlamaFactory-0.9.5-beft/data/jinghong_chen/
 src/eval/.venv
 src/eval/models
+third_party/infoseek_eval/infoseek/infoseek_train.jsonl
 
 
-__pycache__/
+__pycache__/third_party/infoseek_eval/infoseek/*.jsonl
