@@ -143,6 +143,11 @@ def test_build_output_row_records_berag_prior_posterior_telemetry():
     assert row["posterior_hit"] is True
     assert row["prior_passage_is_gt"] is False
     assert row["dominant_passage_is_gt"] is True
+    assert row["prompt_text_or_parts"] == {
+        "retrieved_passage_ids": ["p0", "p1", "p2"]
+    }
+    assert "documents" not in row["prompt_text_or_parts"]
+    assert "shared_prefix" not in row["prompt_text_or_parts"]
 
 
 def test_shared_prior_builder_matches_vllm_wrapper_outputs():
@@ -201,7 +206,7 @@ def _make_llm_test_args(mode: str) -> Namespace:
         mode=mode,
         num_accumulator_rows=16,
         prior_mode="uniform",
-        default_prior_token_offset=-4,
+        default_prior_token_offset=-5,
         prior_module_cls="unused",
         prior_head_path=None,
         prior_hidden_size=4,

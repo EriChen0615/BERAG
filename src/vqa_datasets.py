@@ -48,7 +48,7 @@ def load_vqa_dataset(dataset_name, split='test', img_basedir='data/', take_n=-1,
             Infoseek_ds = Infoseek_ds.select(random.sample(range(len(Infoseek_ds)), k=take_n))
         return Infoseek_ds
     elif dataset_name == 'InfoseekNew':
-        Infoseek_ds = load_dataset("Jingbiao/aravqa", "Infoseek_data", split=split)
+        Infoseek_ds = load_dataset("Jingbiao/aravqa", data_dir="Infoseek_data", split=split)
         Infoseek_ds = Infoseek_ds.map(add_prefix)
         if take_n > 0:
             import random

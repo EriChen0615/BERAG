@@ -11,6 +11,7 @@ import os
 import sys
 import time
 import traceback
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Sequence
@@ -21,7 +22,6 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from vqa_datasets import load_passages  # noqa: E402
 
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,7 @@ PARAMETRIC_PROMPT_TEMPLATE = (
 DEFAULT_PRIOR_MODULE_CLS = "infer.beft_prior.BeftPriorHead"
 EMPTY_DOCUMENT_PASSAGE_ID = "empty_document"
 EMPTY_DOCUMENT_TEXT = " "
+ANSWER_PREFILL = "[ANSWER]"
 
 
 @dataclass
@@ -86,6 +87,7 @@ def render_chat_prompt(
     *,
     include_image: bool,
     system_prompt: str | None = None,
+    assistant_prefill: str | None = None,
 ) -> str:
     user_content: str | list[dict[str, Any]]
     if include_image:
@@ -100,7 +102,20 @@ def render_chat_prompt(
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": user_content})
-    return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    if assistant_prefill is None:
+        return tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+
+    messages.append({"role": "assistant", "content": assistant_prefill})
+    return tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=False,
+        continue_final_message=True,
+    )
 
 
 def make_evidence_document(
@@ -115,7 +130,12 @@ def make_evidence_document(
     words = str(text).split()
     if max_words_per_evidence > 0:
         text = " ".join(words[:max_words_per_evidence])
-    return f"Title: {passage_id}\tContent: {text}\n"
+    title = str(
+        passage_dict.get("passage_title")
+        or passage_dict.get("title")
+        or passage_id
+    )
+    return f"Title: {title}\tContent: {text}\n"
 
 
 def make_rag_user_prompt(prompt_template: str, documents: list[str], question: str) -> str:
@@ -133,11 +153,13 @@ def split_rendered_berag_prompt(
     question: str,
     *,
     include_image: bool,
+    assistant_prefill: str | None = None,
 ) -> tuple[str, str]:
     rendered = render_chat_prompt(
         tokenizer,
         make_berag_user_prompt_with_sentinel(prompt_template, question),
         include_image=include_image,
+        assistant_prefill=assistant_prefill,
     )
     parts = rendered.split(EVIDENCE_SENTINEL)
     if len(parts) != 2:
@@ -185,11 +207,14 @@ def select_retrieved_passages(row: dict[str, Any], args: argparse.Namespace) -> 
         retrieved_passage_ids = [item["passage_id"] for item in retrieved]
         if gt_passage_id not in retrieved_passage_ids:
             score_field = "score" if args.retrieval_field == "retrieved_passage" else "rerank_score"
-            retrieved[0] = {
+            replacement = {
                 "passage_id": gt_passage_id,
-                "passage_content": row["pos_item_contents"][0],
                 score_field: 1.0,
             }
+            pos_item_contents = row.get("pos_item_contents") or []
+            if pos_item_contents:
+                replacement["passage_content"] = pos_item_contents[0]
+            retrieved[0] = replacement
     return retrieved
 
 
@@ -224,10 +249,24 @@ def prepare_example(
         else -1
     )
 
+    assistant_prefill = (
+        ANSWER_PREFILL
+        if bool(getattr(args, "continue_generation_from_ans", False))
+        else None
+    )
     rag_user_prompt = make_rag_user_prompt(prompt_template, documents, row["question"])
-    rag_prompt = render_chat_prompt(tokenizer, rag_user_prompt, include_image=image is not None)
+    rag_prompt = render_chat_prompt(
+        tokenizer,
+        rag_user_prompt,
+        include_image=image is not None,
+        assistant_prefill=assistant_prefill,
+    )
     shared_prefix, suffix = split_rendered_berag_prompt(
-        tokenizer, prompt_template, row["question"], include_image=image is not None
+        tokenizer,
+        prompt_template,
+        row["question"],
+        include_image=image is not None,
+        assistant_prefill=assistant_prefill,
     )
     image_uuid = f"evqa:{question_id}:query-image"
 
@@ -300,6 +339,110 @@ def make_berag_params(args: argparse.Namespace) -> Any:
     return BeragParams(pruning_top_p=args.pruning_top_p)
 
 
+def _chat_template_token_ids(
+    tokenizer: Any,
+    messages: list[dict[str, str]],
+    **template_kwargs: Any,
+) -> list[int]:
+    token_ids = tokenizer.apply_chat_template(
+        messages,
+        tokenize=True,
+        **template_kwargs,
+    )
+    if isinstance(token_ids, Mapping):
+        token_ids = token_ids["input_ids"]
+    if hasattr(token_ids, "tolist"):
+        token_ids = token_ids.tolist()
+    if token_ids and isinstance(token_ids[0], list):
+        if len(token_ids) != 1:
+            raise ValueError("Prior-offset probe unexpectedly returned a batch.")
+        token_ids = token_ids[0]
+    return [int(token_id) for token_id in token_ids]
+
+
+def resolve_prior_token_offset(args: argparse.Namespace, tokenizer: Any) -> int:
+    """Resolve and cache the prior offset once for the active chat template."""
+    configured_offset = int(args.default_prior_token_offset)
+    continuation_enabled = bool(
+        getattr(args, "continue_generation_from_ans", False)
+    )
+    resolution_key = (configured_offset, continuation_enabled)
+    if getattr(args, "_prior_offset_resolution_key", None) == resolution_key:
+        return int(args.resolved_prior_token_offset)
+
+    added_tokens = 0
+    target_token_id: int | None = None
+    target_token_text: str | None = None
+    effective_offset = configured_offset
+    probe_runs = 0
+    if continuation_enabled and configured_offset < 0:
+        probe_messages = [{"role": "user", "content": "probe"}]
+        base_ids = _chat_template_token_ids(
+            tokenizer,
+            probe_messages,
+            add_generation_prompt=True,
+        )
+        continued_ids = _chat_template_token_ids(
+            tokenizer,
+            [
+                *probe_messages,
+                {"role": "assistant", "content": ANSWER_PREFILL},
+            ],
+            add_generation_prompt=False,
+            continue_final_message=True,
+        )
+        probe_runs = 1
+        if continued_ids[: len(base_ids)] != base_ids:
+            raise ValueError(
+                "Assistant-prefill prompt does not preserve the tokenized "
+                "generation-prompt prefix; cannot resolve the prior offset."
+            )
+        added_tokens = len(continued_ids) - len(base_ids)
+        if added_tokens <= 0:
+            raise ValueError(
+                "Assistant-prefill prompt must add at least one prompt token."
+            )
+        effective_offset = configured_offset - added_tokens
+        target_index = len(base_ids) + configured_offset
+        if 0 <= target_index < len(base_ids):
+            target_token_id = base_ids[target_index]
+            try:
+                target_token_text = tokenizer.decode([target_token_id])
+            except (AttributeError, TypeError, ValueError):
+                target_token_text = None
+
+    args.resolved_prior_token_offset = effective_offset
+    args.prior_prefill_added_tokens = added_tokens
+    args.prior_offset_probe_runs = probe_runs
+    args.prior_target_token_id = target_token_id
+    args.prior_target_token_text = target_token_text
+    args._prior_offset_resolution_key = resolution_key
+    logger.info(
+        "Resolved BERAG prior offset: configured=%d added_prefill_tokens=%d "
+        "effective=%d target_token_id=%s target_token=%r.",
+        configured_offset,
+        added_tokens,
+        effective_offset,
+        target_token_id,
+        target_token_text,
+    )
+    return effective_offset
+
+
+def effective_prior_token_offset(args: argparse.Namespace) -> int:
+    """Return the startup-resolved prior offset."""
+    if not bool(getattr(args, "continue_generation_from_ans", False)):
+        return int(args.default_prior_token_offset)
+    resolution_key = (int(args.default_prior_token_offset), True)
+    if getattr(args, "_prior_offset_resolution_key", None) != resolution_key:
+        raise RuntimeError(
+            "Continuation-mode prior offset has not been resolved. Call "
+            "resolve_prior_token_offset(args, tokenizer) once after loading "
+            "the tokenizer."
+        )
+    return int(args.resolved_prior_token_offset)
+
+
 def make_llm(args: argparse.Namespace) -> Any:
     # ensure_vllm_berag_import_path(args)
     from vllm import LLM
@@ -328,7 +471,7 @@ def make_llm(args: argparse.Namespace) -> Any:
             {
                 "berag_num_accumulator_rows": args.num_accumulator_rows,
                 "berag_prior_mode": args.prior_mode,
-                "berag_default_prior_token_offset": args.default_prior_token_offset,
+                "berag_default_prior_token_offset": effective_prior_token_offset(args),
             }
         )
         if args.prior_mode == "module":
@@ -655,6 +798,27 @@ def build_output_row(
     error: str | None = None,
 ) -> dict[str, Any]:
     response = _response_from_output(output)
+    save_full_prompts = bool(getattr(args, "save_full_prompts", False))
+    shared_prefix = (
+        example.berag_shared_prefix["prompt"]
+        if isinstance(example.berag_shared_prefix, dict)
+        else example.berag_shared_prefix
+    )
+    if save_full_prompts:
+        prompt_text_or_parts = (
+            {"rag_prompt": example.rag_request["prompt"]}
+            if args.mode == "rag"
+            else {
+                "shared_prefix": shared_prefix,
+                "documents": example.documents,
+                "suffix": example.berag_suffix,
+            }
+        )
+    else:
+        prompt_text_or_parts = {
+            "retrieved_passage_ids": list(example.retrieved_passage_ids),
+        }
+
     row = dict(example.metadata)
     row.update(
         {
@@ -663,17 +827,7 @@ def build_output_row(
             "response": response,
             "generated_answer": generated_answer_from_response(response or "") if response is not None else None,
             "error": error,
-            "prompt_text_or_parts": (
-                {"rag_prompt": example.rag_request["prompt"]}
-                if args.mode == "rag"
-                else {
-                    "shared_prefix": example.berag_shared_prefix["prompt"]
-                    if isinstance(example.berag_shared_prefix, dict)
-                    else example.berag_shared_prefix,
-                    "documents": example.documents,
-                    "suffix": example.berag_suffix,
-                }
-            ),
+            "prompt_text_or_parts": prompt_text_or_parts,
         }
     )
     _add_timing_telemetry(row, output)
@@ -818,6 +972,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prompt-template", default=None)
     parser.add_argument("--output-path", required=True)
     parser.add_argument("--metrics-output-path", default=None)
+    parser.add_argument(
+        "--save-full-prompts",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Save rendered prompts and document text. Disabled by default; "
+            "compact outputs retain only retrieved passage IDs."
+        ),
+    )
     parser.add_argument("--write-on-batch-complete", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--resume-from-jsonl", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--take-n", type=int, default=-1)
@@ -852,7 +1015,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prior-modeling", choices=("linear_head", "mlp_head"), default="mlp_head")
     parser.add_argument("--prior-head-num-layers", type=int, default=2)
     parser.add_argument("--prior-head-proj-dim", type=int, default=1024)
-    parser.add_argument("--default-prior-token-offset", type=int, default=-4)
+    parser.add_argument(
+        "--default-prior-token-offset",
+        type=int,
+        default=-5,
+        help=(
+            "Prompt-relative hidden-state index for the BEFT prior head. "
+            "E-VQA Qwen3 checkpoints trained with hidden-state offset 4 "
+            "require -5 because training selects L - offset - 1."
+        ),
+    )
     parser.add_argument("--num-accumulator-rows", type=int, default=512)
     parser.add_argument("--pruning-top-p", type=float, default=1.0)
     parser.add_argument("--debug", action="store_true")
@@ -862,6 +1034,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     args = parse_args()
+
+    from vqa_datasets import load_passages
+
     validate_args(args)
     prompt_template = read_prompt_template(args.prompt_template, args.retrieval_topk)
     split_prompt_template(prompt_template)

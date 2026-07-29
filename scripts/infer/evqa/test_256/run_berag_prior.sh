@@ -86,7 +86,7 @@ for RETRIEVAL_TOPK in "${K_ARRAY[@]}"; do
         --prior-modeling "${PRIOR_MODELING:-mlp_head}"   \
         --prior-head-num-layers "${PRIOR_HEAD_NUM_LAYERS:-2}"   \
         --prior-head-proj-dim "${PRIOR_HEAD_PROJ_DIM:-1024}"   \
-        --default-prior-token-offset "${DEFAULT_PRIOR_TOKEN_OFFSET:--4}"   \
+        --default-prior-token-offset "${DEFAULT_PRIOR_TOKEN_OFFSET:--5}"   \
         --model "${MODEL}"   \
         --tokenizer-path "${TOKENIZER_PATH}"   \
         --retrieval-ds-path "${RETRIEVAL_DS_PATH}"   \
@@ -95,6 +95,7 @@ for RETRIEVAL_TOPK in "${K_ARRAY[@]}"; do
         --retrieval-field "${RETRIEVAL_FIELD:-retrieved_passage}"   \
         --retrieval-topk "${RETRIEVAL_TOPK}"   \
         --output-path "${OUTPUT_PATH}"   \
+        --no-save-full-prompts   \
         --batch-size "${BATCH_SIZE:-64}"   \
         --max-model-len "${MAX_MODEL_LEN:-32768}"   \
         --max-tokens "${MAX_TOKENS:-64}"   \

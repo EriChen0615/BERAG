@@ -44,6 +44,7 @@ for RETRIEVAL_TOPK in "${K_ARRAY[@]}"; do
         --retrieval-field "${RETRIEVAL_FIELD:-retrieved_passage}"   \
         --retrieval-topk "${RETRIEVAL_TOPK}"   \
         --output-path "${OUTPUT_PATH}"   \
+        --no-save-full-prompts   \
         --batch-size "${BATCH_SIZE:-64}"   \
         --max-model-len "${MAX_MODEL_LEN:-65536}"  \
         --max-tokens "${MAX_TOKENS:-32}"   \
