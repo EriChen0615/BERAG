@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="${REPO_ROOT:-/workspace/projects/BERAG}"
+
+export MODEL_SLUG="${MODEL_SLUG:-qwen3-vl-8b}"
+export OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/infer/infoseek_full}"
+export K_VALUES="${K_VALUES:-1,2,3,5,10,15,20,30,50}"
+export EXPLODE_PAGE_SECTIONS=1
+export MAX_EXPLODED_DOCS_PER_PAGE="${MAX_EXPLODED_DOCS_PER_PAGE:-5}"
+export CONTINUE_GENERATION_FROM_ANS="${CONTINUE_GENERATION_FROM_ANS:-1}"
+export ADD_PSEUDO_DOCUMENT="${ADD_PSEUDO_DOCUMENT:-0}"
+
+export BEFT_BATCH_SIZE="${BEFT_BATCH_SIZE:-1}"
+export BEFT_MAX_MODEL_LEN="${BEFT_MAX_MODEL_LEN:-32768}"
+export MAX_NUM_SEQS="${MAX_NUM_SEQS:-256}"
+export NUM_ACCUMULATOR_ROWS="${NUM_ACCUMULATOR_ROWS:-512}"
+export MAX_WORDS_PER_EVIDENCE="${MAX_WORDS_PER_EVIDENCE:-2048}"
+export PRUNING_TOP_P="${PRUNING_TOP_P:-1.0}"
+
+RUN_MODE=beft exec bash \
+    "${REPO_ROOT}/scripts/infer/infoseek/run_sft_beft.sh"

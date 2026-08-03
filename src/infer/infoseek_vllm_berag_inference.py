@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 from pathlib import Path
 import sys
@@ -66,6 +67,26 @@ def parse_args() -> argparse.Namespace:
         default="retrieved_passage",
     )
     parser.add_argument("--retrieval-topk", type=int, default=5)
+    parser.add_argument(
+        "--explode-page-sections",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Treat every nonempty section from each selected EchoSight page "
+            "as a separate RAG/BERAG evidence document."
+        ),
+    )
+    parser.add_argument(
+        "--max-exploded-docs-per-page",
+        "--max_exploded_docs_per_page",
+        dest="max_exploded_docs_per_page",
+        type=int,
+        default=5,
+        help=(
+            "Maximum number of nonempty sections retained from each page when "
+            "--explode-page-sections is enabled (default: 5)."
+        ),
+    )
     parser.add_argument(
         "--continue_generation_from_ans",
         "--continue-generation-from-ans",
@@ -138,6 +159,106 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+def load_echosight_kb_entries(path: str | Path) -> dict[str, dict[str, Any]]:
+    """Load EchoSight entries indexed by their canonical page URL."""
+    with Path(path).open(encoding="utf-8") as f:
+        raw_kb = json.load(f)
+    if not isinstance(raw_kb, dict):
+        raise ValueError(f"EchoSight KB must be a JSON object: {path}")
+
+    kb_by_url: dict[str, dict[str, Any]] = {}
+    for key, value in raw_kb.items():
+        if not isinstance(value, dict):
+            raise ValueError(f"EchoSight KB entry {key!r} is not an object.")
+        page_url = str(value.get("url") or key)
+        if page_url in kb_by_url:
+            raise ValueError(f"Duplicate EchoSight page URL: {page_url}")
+        kb_by_url[page_url] = value
+    return kb_by_url
+
+
+def explode_retrieved_page_sections(
+    retrieved_pages: list[dict[str, Any]],
+    kb_by_url: dict[str, dict[str, Any]],
+    max_exploded_docs_per_page: int = 5,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Expand selected pages into aligned section documents and parent IDs."""
+    if max_exploded_docs_per_page <= 0:
+        raise ValueError("max_exploded_docs_per_page must be greater than 0.")
+
+    sections: list[dict[str, Any]] = []
+    parent_page_ids: list[str] = []
+    for page in retrieved_pages:
+        page_id = str(page["passage_id"])
+        entry = kb_by_url.get(page_id)
+        if entry is None:
+            raise KeyError(f"Retrieved page is absent from EchoSight KB: {page_id}")
+
+        section_titles = entry.get("section_titles") or []
+        section_texts = entry.get("section_texts") or []
+        if not isinstance(section_titles, list) or not isinstance(section_texts, list):
+            raise ValueError(
+                f"EchoSight sections must be lists for page {page_id}."
+            )
+        if len(section_titles) != len(section_texts):
+            raise ValueError(
+                "EchoSight section title/text length mismatch for "
+                f"{page_id}: {len(section_titles)} titles versus "
+                f"{len(section_texts)} texts."
+            )
+
+        page_title = str(
+            entry.get("title")
+            or page.get("passage_title")
+            or page.get("title")
+            or page_id
+        ).strip()
+        page_section_count = 0
+        for section_index, (section_title_value, section_text_value) in enumerate(
+            zip(section_titles, section_texts, strict=True)
+        ):
+            section_text = str(section_text_value or "").strip()
+            if not section_text:
+                continue
+            section_title = str(section_title_value or "").strip()
+            document_title = (
+                f"{page_title} — {section_title}" if section_title else page_title
+            )
+            section = dict(page)
+            section.update(
+                {
+                    "passage_id": f"{page_id}::section::{section_index}",
+                    "passage_title": document_title,
+                    "passage_content": section_text,
+                    "parent_passage_id": page_id,
+                    "section_index": section_index,
+                    "section_title": section_title,
+                }
+            )
+            sections.append(section)
+            parent_page_ids.append(page_id)
+            page_section_count += 1
+            if page_section_count >= max_exploded_docs_per_page:
+                break
+
+        if page_section_count == 0:
+            fallback_section = dict(page)
+            fallback_section.update(
+                {
+                    "passage_id": f"{page_id}::section::0",
+                    "passage_title": page_title,
+                    "passage_content": page_title,
+                    "parent_passage_id": page_id,
+                    "section_index": 0,
+                    "section_title": "",
+                    "empty_section_fallback": True,
+                }
+            )
+            sections.append(fallback_section)
+            parent_page_ids.append(page_id)
+    return sections, parent_page_ids
+
+
 def add_pseudo_document(
     example: engine.PreparedExample,
     tokenizer: Any,
@@ -147,11 +268,17 @@ def add_pseudo_document(
     """Append the curation pseudo-document and refresh the RAG prompt."""
     example.documents.append(PSEUDO_DOCUMENT_TEXT)
     example.retrieved_passage_ids.append(PSEUDO_DOCUMENT_PASSAGE_ID)
+    branch_parent_page_ids = list(
+        example.metadata.get("berag_branch_parent_page_ids") or []
+    )
+    branch_parent_page_ids.append(PSEUDO_DOCUMENT_PASSAGE_ID)
     example.metadata.update(
         {
             "add_pseudo_document": True,
             "pseudo_document_passage_id": PSEUDO_DOCUMENT_PASSAGE_ID,
             "retrieved_passage_ids": list(example.retrieved_passage_ids),
+            "berag_branch_passage_ids": list(example.retrieved_passage_ids),
+            "berag_branch_parent_page_ids": branch_parent_page_ids,
             "num_ensemble_passages": len(example.documents),
         }
     )
@@ -176,13 +303,50 @@ def prepare_infoseek_example(
     tokenizer: Any,
     prompt_template: str,
     pid_to_content_map: dict[str, str],
+    kb_by_url: dict[str, dict[str, Any]] | None = None,
 ) -> engine.PreparedExample:
+    retrieved_pages = engine.select_retrieved_passages(row, args)
+    explode_page_sections = bool(
+        getattr(args, "explode_page_sections", False)
+    )
+    if explode_page_sections:
+        if kb_by_url is None:
+            raise ValueError(
+                "kb_by_url is required when --explode-page-sections is enabled."
+            )
+        retrieved_branches, branch_parent_page_ids = (
+            explode_retrieved_page_sections(
+                retrieved_pages,
+                kb_by_url,
+                max_exploded_docs_per_page=getattr(
+                    args, "max_exploded_docs_per_page", 5
+                ),
+            )
+        )
+    else:
+        retrieved_branches = retrieved_pages
+        branch_parent_page_ids = [
+            str(item["passage_id"]) for item in retrieved_pages
+        ]
+
     example = engine.prepare_example(
         row,
         args,
         tokenizer,
         prompt_template,
         pid_to_content_map,
+        retrieved_passages_override=retrieved_branches,
+    )
+    retrieved_page_ids = [str(item["passage_id"]) for item in retrieved_pages]
+    branch_passage_ids = list(example.retrieved_passage_ids)
+    gt_passage_id = example.metadata.get("gt_passage_id")
+    gt_branch_indices = [
+        index
+        for index, parent_id in enumerate(branch_parent_page_ids)
+        if parent_id == gt_passage_id
+    ]
+    example.metadata["gt_passage_in_zidx"] = (
+        gt_branch_indices[0] if gt_branch_indices else -1
     )
     add_pseudo_document_enabled = bool(
         getattr(args, "add_pseudo_document", False)
@@ -198,6 +362,21 @@ def prepare_infoseek_example(
             "add_pseudo_document": add_pseudo_document_enabled,
             "continue_generation_from_ans": continue_generation_from_ans,
             "assistant_prefill": assistant_prefill,
+            "explode_page_sections": explode_page_sections,
+            "max_exploded_docs_per_page": (
+                getattr(args, "max_exploded_docs_per_page", 5)
+                if explode_page_sections
+                else None
+            ),
+            "retrieved_page_ids": retrieved_page_ids,
+            "retrieved_section_ids": (
+                branch_passage_ids if explode_page_sections else []
+            ),
+            "berag_branch_passage_ids": branch_passage_ids,
+            "berag_branch_parent_page_ids": list(branch_parent_page_ids),
+            "gt_passage_branch_indices": gt_branch_indices,
+            "num_retrieved_pages": len(retrieved_page_ids),
+            "num_ensemble_passages": len(example.documents),
         }
     )
     if add_pseudo_document_enabled:
@@ -242,6 +421,30 @@ def main() -> None:
         raise ValueError(
             "--add-pseudo-document requires --retrieval-topk greater than 0."
         )
+    if args.explode_page_sections and args.retrieval_topk == 0:
+        raise ValueError(
+            "--explode-page-sections requires --retrieval-topk greater than 0."
+        )
+    if args.max_exploded_docs_per_page <= 0:
+        raise ValueError("--max-exploded-docs-per-page must be greater than 0.")
+    max_exploded_branches = (
+        args.retrieval_topk * args.max_exploded_docs_per_page
+    )
+    if (
+        args.mode == "berag"
+        and args.explode_page_sections
+        and max_exploded_branches >= args.num_accumulator_rows
+    ):
+        logger.warning(
+            "retrieval_topk (%d) * max_exploded_docs_per_page (%d) = %d, "
+            "which is not smaller than num_accumulator_rows (%d). BERAG also "
+            "needs a mixture row; reduce K/the per-page cap or increase "
+            "--num-accumulator-rows.",
+            args.retrieval_topk,
+            args.max_exploded_docs_per_page,
+            max_exploded_branches,
+            args.num_accumulator_rows,
+        )
 
     prompt_template = engine.read_prompt_template(
         args.prompt_template,
@@ -252,8 +455,13 @@ def main() -> None:
     if args.mode == "berag":
         engine.resolve_prior_token_offset(args, tokenizer)
 
-    passage_set_name = f"EchoSightKB:{Path(args.knowledge_base).resolve()}"
-    _, pid_to_content_map = load_passages(passage_set_name, split="validation")
+    kb_by_url = None
+    if args.explode_page_sections:
+        kb_by_url = load_echosight_kb_entries(args.knowledge_base)
+        pid_to_content_map = {}
+    else:
+        passage_set_name = f"EchoSightKB:{Path(args.knowledge_base).resolve()}"
+        _, pid_to_content_map = load_passages(passage_set_name, split="validation")
 
     existing_rows = (
         engine.read_jsonl(args.output_path) if args.resume_from_jsonl else []
@@ -296,6 +504,7 @@ def main() -> None:
             tokenizer,
             prompt_template,
             pid_to_content_map,
+            kb_by_url,
         )
         for row in rows
     ]
@@ -314,6 +523,22 @@ def main() -> None:
             ),
         )
 
+    result.metrics["explode_page_sections"] = args.explode_page_sections
+    if args.explode_page_sections:
+        result.metrics["max_exploded_docs_per_page"] = (
+            args.max_exploded_docs_per_page
+        )
+        section_counts = [
+            len(example.metadata.get("retrieved_section_ids") or [])
+            for example in examples
+        ]
+        result.metrics["num_exploded_sections"] = sum(section_counts)
+        result.metrics["mean_exploded_sections_per_example"] = (
+            sum(section_counts) / len(section_counts) if section_counts else 0.0
+        )
+        result.metrics["max_exploded_sections_per_example"] = max(
+            section_counts, default=0
+        )
     result.metrics["add_pseudo_document"] = args.add_pseudo_document
     result.metrics["save_full_prompts"] = args.save_full_prompts
     result.metrics["continue_generation_from_ans"] = (

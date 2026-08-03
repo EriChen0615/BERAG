@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -83,8 +84,15 @@ def run_beft(
     generating_args: "GeneratingArguments",
     callbacks: Optional[list["TrainerCallback"]] = None,
 ):
+    # Unsloth suppresses raw logits by default, but the custom BEFT objective
+    # needs per-passage answer-token log-probabilities.
+    os.environ["UNSLOTH_RETURN_LOGITS"] = "1"
+
     tokenizer_module = load_tokenizer(model_args)
     tokenizer = tokenizer_module["tokenizer"]
+    if finetuning_args.beft_use_logits_to_keep:
+        tokenizer.padding_side = "left"
+        tokenizer.init_kwargs["padding_side"] = "left"
     template = get_template_and_fix_tokenizer(tokenizer, data_args)
     dataset_module = get_dataset(template, model_args, data_args, training_args, stage="beft", **tokenizer_module)
     model = load_model(tokenizer, model_args, finetuning_args, training_args.do_train)

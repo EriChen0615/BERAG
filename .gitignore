@@ -8,6 +8,7 @@ src/train/LlamaFactory-0.9.5-beft/unsloth_compiled_cache/
 outputs/jinghong_chen
 outputs/tokenized
 outputs/infer
+outputs/inference_benchmark
 src/train/LlamaFactory-0.9.5-beft/data/jinghong_chen/
 src/eval/.venv
 src/eval/models

@@ -3,7 +3,7 @@ model_name_or_path: google/gemma-4-E2B-it
 image_max_pixels: 262144
 video_max_pixels: 16384
 flash_attn: auto
-use_unsloth: true
+use_unsloth: false
 
 ### method
 stage: beft
@@ -12,7 +12,7 @@ finetuning_type: lora
 lora_target: all
 lora_rank: 64
 lora_alpha: 128
-beft_hidden_state_offset: 0
+beft_hidden_state_offset: 4 
 beft_prior_loss_factor: 0.0
 beft_prior_head_lr: 1.0e-6
 beft_prior_modeling: mlp_head
@@ -27,8 +27,8 @@ enable_thinking: false
 cutoff_len: 35000
 overwrite_cache: false
 media_dir: /workspace/projects/BERAG/
-preprocessing_num_workers: 8
-preprocessing_batch_size: 32
+preprocessing_num_workers: 1
+preprocessing_batch_size: 8
 dataloader_num_workers: 4
 packing: false
 neat_packing: false
@@ -40,7 +40,7 @@ logging_steps: 10
 save_steps: 1000
 plot_loss: true
 overwrite_output_dir: false
-save_only_model: false
+save_only_model: true
 report_to: wandb
 run_name: gemma-4-e2b-it-infoseek-beft-k2-64000
 

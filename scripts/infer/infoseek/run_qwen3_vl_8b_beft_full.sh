@@ -12,11 +12,11 @@ export MODEL_SLUG="${MODEL_SLUG:-qwen3-vl-8b}"
 export OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/infer/infoseek_prefill_full}"
 
 # Run the larger K values first, followed by the small-K sweep and K=50.
-export K_VALUES="${K_VALUES:-15,20,30,1,2,3,5,10,50}"
+export K_VALUES="${K_VALUES:-30,50}"
 export CONTINUE_GENERATION_FROM_ANS="${CONTINUE_GENERATION_FROM_ANS:-1}"
 export ADD_PSEUDO_DOCUMENT="${ADD_PSEUDO_DOCUMENT:-0}"
 
-export BEFT_BATCH_SIZE="${BEFT_BATCH_SIZE:-16}"
+export BEFT_BATCH_SIZE="${BEFT_BATCH_SIZE:-1}"
 export BEFT_MAX_MODEL_LEN="${BEFT_MAX_MODEL_LEN:-32768}"
 export MAX_WORDS_PER_EVIDENCE="${MAX_WORDS_PER_EVIDENCE:-2048}"
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -88,6 +89,85 @@ def get_gt_passage_id(row: dict[str, Any]) -> str:
     return first_text(row.get("pos_item_ids"))
 
 
+def _logaddexp(left: float, right: float) -> float:
+    if left == -math.inf:
+        return right
+    if right == -math.inf:
+        return left
+    high = max(left, right)
+    if high == math.inf:
+        return high
+    low = min(left, right)
+    return high + math.log1p(math.exp(low - high))
+
+
+def aggregate_page_log_scores(
+    parent_ids_value: Any,
+    log_scores_value: Any,
+) -> list[tuple[str, float]]:
+    """Sum branch probabilities by parent page and return a page ranking."""
+    parent_ids = [as_text(value).strip() for value in as_list(parent_ids_value)]
+    log_scores = as_list(log_scores_value)
+    if not parent_ids or not log_scores:
+        return []
+    if len(parent_ids) != len(log_scores):
+        raise ValueError(
+            "BERAG branch parent IDs and log-scores are not aligned: "
+            f"{len(parent_ids)} IDs versus {len(log_scores)} scores."
+        )
+
+    page_log_scores: dict[str, float] = {}
+    first_indices: dict[str, int] = {}
+    for index, (parent_id, raw_score) in enumerate(zip(parent_ids, log_scores)):
+        if not parent_id or raw_score is None:
+            continue
+        try:
+            log_score = float(raw_score)
+        except (TypeError, ValueError):
+            continue
+        if math.isnan(log_score):
+            continue
+        if parent_id not in page_log_scores:
+            page_log_scores[parent_id] = log_score
+            first_indices[parent_id] = index
+        else:
+            page_log_scores[parent_id] = _logaddexp(
+                page_log_scores[parent_id], log_score
+            )
+
+    return sorted(
+        page_log_scores.items(),
+        key=lambda item: (-item[1], first_indices[item[0]]),
+    )
+
+
+def add_page_level_berag_rankings(rows: list[dict[str, Any]]) -> None:
+    """Attach page rankings produced by summing aligned section probabilities."""
+    for row in rows:
+        parent_ids_value = row.get("berag_branch_parent_page_ids")
+        if parent_ids_value is None:
+            continue
+
+        gt_passage_id = get_gt_passage_id(row)
+        for label, score_key in (
+            ("prior", "berag_log_prior"),
+            ("posterior", "berag_log_posterior"),
+        ):
+            ranked = aggregate_page_log_scores(
+                parent_ids_value,
+                row.get(score_key),
+            )
+            if not ranked:
+                continue
+            ranked_page_ids = [page_id for page_id, _ in ranked]
+            row[f"berag_{label}_sorted_page_ids"] = ranked_page_ids
+            row[f"berag_{label}_log_probability_by_page"] = {
+                page_id: log_score for page_id, log_score in ranked
+            }
+            row[f"berag_{label}_top_page_id"] = ranked_page_ids[0]
+            row[f"{label}_page_hit"] = ranked_page_ids[0] == gt_passage_id
+
+
 def compute_recall_at_k(
     rows: list[dict[str, Any]], ranked_id_keys: tuple[str, ...]
 ) -> tuple[dict[str, float], int]:
@@ -113,15 +193,24 @@ def compute_recall_at_k(
 
 
 def add_recall_metrics(report: dict[str, Any], rows: list[dict[str, Any]]) -> None:
+    add_page_level_berag_rankings(rows)
     retrieval_recall, retrieval_count = compute_recall_at_k(
-        rows, ("retrieved_passage_ids",)
+        rows, ("retrieved_page_ids", "retrieved_passage_ids")
     )
     prior_recall, prior_count = compute_recall_at_k(
         rows,
-        ("berag_prior_sorted_passage_ids", "prior_sorted_passage_ids"),
+        (
+            "berag_prior_sorted_page_ids",
+            "berag_prior_sorted_passage_ids",
+            "prior_sorted_passage_ids",
+        ),
     )
     posterior_recall, posterior_count = compute_recall_at_k(
-        rows, ("berag_posterior_sorted_passage_ids",)
+        rows,
+        (
+            "berag_posterior_sorted_page_ids",
+            "berag_posterior_sorted_passage_ids",
+        ),
     )
 
     report["retrieval_recall_at_k"] = retrieval_recall
@@ -133,6 +222,9 @@ def add_recall_metrics(report: dict[str, Any], rows: list[dict[str, Any]]) -> No
     if posterior_recall:
         report["posterior_recall_at_k"] = posterior_recall
         report["posterior_recall_num_examples"] = posterior_count
+    if any(bool(row.get("explode_page_sections")) for row in rows):
+        report["berag_recall_level"] = "page"
+        report["berag_page_probability_aggregation"] = "sum_section_probabilities"
 
 
 def select_prediction(
@@ -273,10 +365,17 @@ def build_instances(marked_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "gt_passage_id",
             "gt_passage_in_zidx",
             "retrieved_passage_ids",
+            "retrieved_page_ids",
             "berag_prior_top_passage_id",
             "berag_posterior_top_passage_id",
+            "berag_prior_sorted_page_ids",
+            "berag_posterior_sorted_page_ids",
+            "berag_prior_top_page_id",
+            "berag_posterior_top_page_id",
             "prior_hit",
             "posterior_hit",
+            "prior_page_hit",
+            "posterior_page_hit",
         ):
             if key in row:
                 instance[key] = row[key]
@@ -327,6 +426,7 @@ def main() -> None:
     import infoseek_eval as toolkit
 
     rows = read_jsonl(predictions_file, limit=args.limit)
+    add_page_level_berag_rankings(rows)
     official_predictions, marked_rows, selected_field = prepare_predictions(
         rows, args.prediction_field
     )

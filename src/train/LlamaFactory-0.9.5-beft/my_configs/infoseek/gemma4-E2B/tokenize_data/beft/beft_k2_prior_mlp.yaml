@@ -25,8 +25,8 @@ enable_thinking: false
 cutoff_len: 35000
 overwrite_cache: true
 media_dir: /workspace/projects/BERAG/
-preprocessing_num_workers: 8
-preprocessing_batch_size: 32
+preprocessing_num_workers: 4
+preprocessing_batch_size: 16
 dataloader_num_workers: 4
 packing: false
 neat_packing: false

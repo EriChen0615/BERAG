@@ -12,7 +12,7 @@ finetuning_type: lora
 lora_target: all
 lora_rank: 64
 lora_alpha: 128
-beft_hidden_state_offset: 0
+beft_hidden_state_offset: 4 
 beft_prior_loss_factor: 0.0
 beft_prior_head_lr: 1.0e-6
 beft_prior_modeling: mlp_head
@@ -27,12 +27,12 @@ enable_thinking: false
 cutoff_len: 35000
 overwrite_cache: false
 media_dir: /workspace/projects/BERAG/
-preprocessing_num_workers: 8
-preprocessing_batch_size: 32
+preprocessing_num_workers: 1
+preprocessing_batch_size: 8
 dataloader_num_workers: 4
 packing: false
 neat_packing: false
-tokenized_path: /workspace/projects/BERAG/outputs/tokenized/infoseek_beft_gemma4n_e4b_sample64000_cutoff35k
+tokenized_path: /workspace/projects/BERAG/outputs/tokenized/infoseek_beft_gemma4n_e2b_sample64000_cutoff35k
 
 ### output
 output_dir: saves/gemma-4-e4b-it/lora/infoseek/beft/beft-k2-prior-mlp-r64-bs8-sample64000
@@ -40,7 +40,7 @@ logging_steps: 10
 save_steps: 1000
 plot_loss: true
 overwrite_output_dir: false
-save_only_model: false
+save_only_model: true
 report_to: wandb
 run_name: gemma-4-e4b-it-infoseek-beft-k2-64000
 

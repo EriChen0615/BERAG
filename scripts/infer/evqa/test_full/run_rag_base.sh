@@ -51,6 +51,7 @@ for RETRIEVAL_TOPK in "${K_ARRAY[@]}"; do
         --dtype "${DTYPE:-bfloat16}"   \
         --tensor-parallel-size "${TENSOR_PARALLEL_SIZE:-1}"   \
         --gpu-memory-utilization "${GPU_MEMORY_UTILIZATION:-0.9}"   \
+        ${DISABLE_WEIGHTS_LOADING_TRACKING:+--disable-weights-loading-tracking}   \
         ${TAKE_N:+--take-n "${TAKE_N}"}   \
         ${ENSURE_GT:+--ensure-gt-passage-in-ensemble}  \
         ${DRY_RUN:+--dry-run --dry-run-no-images}

@@ -477,6 +477,10 @@ class FinetuningArguments(
         default=0,
         metadata={"help": "Offset from the hidden state immediately before the first answer label for BEFT prior."},
     )
+    beft_use_logits_to_keep: bool = field(
+        default=False,
+        metadata={"help": "Whether to compute BEFT logits only for the suffix containing supervised labels."},
+    )
     beft_use_prior_head_loss: bool = field(
         default=False,
         metadata={"help": "Whether to supervise the BEFT prior head with multi-hot BCE labels."},

@@ -232,11 +232,17 @@ def prepare_example(
     tokenizer: Any,
     prompt_template: str,
     pid_to_content_map: dict[str, str],
+    *,
+    retrieved_passages_override: Sequence[Mapping[str, Any]] | None = None,
 ) -> PreparedExample:
     question_id = str(row["question_id"])
     image_path = os.path.join(args.img_basedir, row["img_path"])
     image = None if args.dry_run_no_images else load_image(image_path)
-    retrieved_passages = select_retrieved_passages(row, args)
+    retrieved_passages = (
+        [dict(item) for item in retrieved_passages_override]
+        if retrieved_passages_override is not None
+        else select_retrieved_passages(row, args)
+    )
     documents = [
         make_evidence_document(item, pid_to_content_map, args.max_words_per_evidence)
         for item in retrieved_passages
@@ -465,6 +471,14 @@ def make_llm(args: argparse.Namespace) -> Any:
         llm_kwargs["max_num_batched_tokens"] = args.max_num_batched_tokens
     if args.enforce_eager:
         llm_kwargs["enforce_eager"] = True
+    if bool(getattr(args, "disable_weights_loading_tracking", False)):
+        logger.warning(
+            "Disabling vLLM checkpoint-completeness tracking. This should "
+            "only be used for the known Gemma4 shared-KV weight omission."
+        )
+        llm_kwargs["model_loader_extra_config"] = {
+            "enable_weights_track": False,
+        }
 
     if args.mode == "berag":
         llm_kwargs.update(
@@ -1001,6 +1015,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-num-seqs", type=int, default=None)
     parser.add_argument("--max-num-batched-tokens", type=int, default=None)
     parser.add_argument("--enforce-eager", action="store_true")
+    parser.add_argument(
+        "--disable-weights-loading-tracking",
+        action="store_true",
+        help=(
+            "Disable vLLM's final checkpoint-completeness audit. Intended "
+            "only as a temporary workaround for Gemma4 shared-KV layers, "
+            "whose unused K-normalization weights are absent by design."
+        ),
+    )
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--max-tokens", type=int, default=64)
     parser.add_argument("--disable-tqdm", action="store_true")

@@ -19,12 +19,13 @@ TOKENIZER_PATH="${TOKENIZER_PATH:-Qwen/Qwen3-VL-8B-Instruct}"
 
 OUTPUT_DIR="${OUTPUT_DIR:-${REPO_ROOT}/outputs/infer/infoseek_full}"
 MODEL_SLUG="${MODEL_SLUG:-qwen3-vl-8b}"
+RAG_RUN_SLUG="${RAG_RUN_SLUG:-sft}"
 K_VALUES="${K_VALUES:-${RETRIEVAL_TOPK:-5}}"
 K_VALUES="${K_VALUES//,/ }"
 read -r -a K_ARRAY <<< "${K_VALUES}"
 
 usage() {
-    echo "Usage: RUN_MODE=all|sft|beft [K_VALUES=2,5] [ADD_PSEUDO_DOCUMENT=1] [CONTINUE_GENERATION_FROM_ANS=1] bash $0" >&2
+    echo "Usage: RUN_MODE=all|sft|beft [K_VALUES=2,5] [EXPLODE_PAGE_SECTIONS=1] [MAX_EXPLODED_DOCS_PER_PAGE=5] [ADD_PSEUDO_DOCUMENT=1] [CONTINUE_GENERATION_FROM_ANS=1] bash $0" >&2
 }
 
 case "${RUN_MODE}" in
@@ -75,6 +76,26 @@ common_args=(
 [[ -n "${MAX_NUM_BATCHED_TOKENS:-}" ]] && common_args+=(--max-num-batched-tokens "${MAX_NUM_BATCHED_TOKENS}")
 
 output_suffix=""
+case "${EXPLODE_PAGE_SECTIONS:-0}" in
+    0) ;;
+    1)
+        max_exploded_docs_per_page="${MAX_EXPLODED_DOCS_PER_PAGE:-5}"
+        [[ "${max_exploded_docs_per_page}" =~ ^[1-9][0-9]*$ ]] || {
+            echo "MAX_EXPLODED_DOCS_PER_PAGE must be a positive integer." >&2
+            exit 2
+        }
+        common_args+=(
+            --explode-page-sections
+            --max-exploded-docs-per-page "${max_exploded_docs_per_page}"
+        )
+        output_suffix+="-explode-sections-max${max_exploded_docs_per_page}"
+        ;;
+    *)
+        echo "EXPLODE_PAGE_SECTIONS must be 0 or 1." >&2
+        exit 2
+        ;;
+esac
+
 case "${ADD_PSEUDO_DOCUMENT:-0}" in
     0) ;;
     1)
@@ -102,9 +123,9 @@ esac
 run_sft() {
     require_merged_model "SFT" "${SFT_MODEL}"
     for k in "${K_ARRAY[@]}"; do
-        local exp_dir="${OUTPUT_DIR}/${MODEL_SLUG}/sft/K=${k}${output_suffix}"
+        local exp_dir="${OUTPUT_DIR}/${MODEL_SLUG}/${RAG_RUN_SLUG}/K=${k}${output_suffix}"
         mkdir -p "${exp_dir}"
-        echo "[InfoSeek SFT/RAG] K=${k}; output=${exp_dir}/predictions.jsonl"
+        echo "[InfoSeek ${RAG_RUN_SLUG}/RAG] K=${k}; output=${exp_dir}/predictions.jsonl"
         "${PYTHON_BIN}" "${INFERENCE_SCRIPT}" \
             --mode rag \
             --model "${SFT_MODEL}" \

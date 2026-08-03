@@ -16,6 +16,7 @@ from infer.evqa_vllm_berag_inference import (
 from infer.infoseek_vllm_berag_inference import (
     PSEUDO_DOCUMENT_PASSAGE_ID,
     PSEUDO_DOCUMENT_TEXT,
+    explode_retrieved_page_sections,
     prepare_infoseek_example,
 )
 
@@ -372,3 +373,144 @@ def test_gt_injection_does_not_require_duplicated_passage_content():
     assert select_retrieved_passages(row, args) == [
         {"passage_id": "https://wiki/gold", "score": 1.0}
     ]
+
+
+def test_prepare_infoseek_example_explodes_aligned_page_sections():
+    args = Namespace(
+        img_basedir="/images",
+        dry_run_no_images=True,
+        retrieval_topk=2,
+        retrieval_field="retrieved_passage",
+        ensure_gt_passage_in_ensemble=False,
+        max_words_per_evidence=2,
+        add_pseudo_document=False,
+        continue_generation_from_ans=False,
+        explode_page_sections=True,
+    )
+    row = {
+        "question_id": "q-sections",
+        "img_path": "image.jpg",
+        "question": "What?",
+        "question_type": "infoseek",
+        "gold_answer": "answer",
+        "answers": ["answer"],
+        "pos_item_ids": ["https://wiki/one"],
+        "retrieved_passage": [
+            {"passage_id": "https://wiki/one", "score": 1.0},
+            {"passage_id": "https://wiki/two", "score": 0.5},
+        ],
+    }
+    kb_by_url = {
+        "https://wiki/one": {
+            "url": "https://wiki/one",
+            "title": "Page One",
+            "section_titles": ["History", "Uses"],
+            "section_texts": ["alpha beta gamma", "delta epsilon"],
+        },
+        "https://wiki/two": {
+            "url": "https://wiki/two",
+            "title": "Page Two",
+            "section_titles": ["Overview"],
+            "section_texts": ["zeta eta theta"],
+        },
+    }
+
+    example = prepare_infoseek_example(
+        row,
+        args,
+        FakeTokenizer(),
+        DEFAULT_PROMPT_TEMPLATE,
+        {},
+        kb_by_url,
+    )
+
+    assert example.documents == [
+        "Title: Page One — History\tContent: alpha beta\n",
+        "Title: Page One — Uses\tContent: delta epsilon\n",
+        "Title: Page Two — Overview\tContent: zeta eta\n",
+    ]
+    assert example.retrieved_passage_ids == [
+        "https://wiki/one::section::0",
+        "https://wiki/one::section::1",
+        "https://wiki/two::section::0",
+    ]
+    assert example.metadata["retrieved_page_ids"] == [
+        "https://wiki/one",
+        "https://wiki/two",
+    ]
+    assert example.metadata["berag_branch_parent_page_ids"] == [
+        "https://wiki/one",
+        "https://wiki/one",
+        "https://wiki/two",
+    ]
+    assert example.metadata["gt_passage_branch_indices"] == [0, 1]
+    assert example.metadata["gt_passage_in_zidx"] == 0
+    assert example.metadata["num_ensemble_passages"] == 3
+
+
+def test_exploded_sections_are_capped_per_page():
+    retrieved_pages = [
+        {"passage_id": "https://wiki/one", "score": 1.0},
+    ]
+    kb_by_url = {
+        "https://wiki/one": {
+            "url": "https://wiki/one",
+            "title": "Page One",
+            "section_titles": ["A", "B", "C"],
+            "section_texts": ["one", "two", "three"],
+        }
+    }
+
+    sections, parent_page_ids = explode_retrieved_page_sections(
+        retrieved_pages,
+        kb_by_url,
+        max_exploded_docs_per_page=2,
+    )
+
+    assert [section["passage_id"] for section in sections] == [
+        "https://wiki/one::section::0",
+        "https://wiki/one::section::1",
+    ]
+    assert parent_page_ids == [
+        "https://wiki/one",
+        "https://wiki/one",
+    ]
+
+
+def test_exploded_sections_require_aligned_titles_and_texts():
+    args = Namespace(
+        img_basedir="/images",
+        dry_run_no_images=True,
+        retrieval_topk=1,
+        retrieval_field="retrieved_passage",
+        ensure_gt_passage_in_ensemble=False,
+        max_words_per_evidence=2,
+        add_pseudo_document=False,
+        continue_generation_from_ans=False,
+        explode_page_sections=True,
+    )
+    row = {
+        "question_id": "q-misaligned",
+        "img_path": "image.jpg",
+        "question": "What?",
+        "pos_item_ids": ["https://wiki/one"],
+        "retrieved_passage": [{"passage_id": "https://wiki/one", "score": 1.0}],
+    }
+    kb_by_url = {
+        "https://wiki/one": {
+            "url": "https://wiki/one",
+            "title": "Page One",
+            "section_titles": ["History"],
+            "section_texts": ["alpha", "beta"],
+        }
+    }
+
+    with pytest.raises(ValueError, match="length mismatch"):
+        prepare_infoseek_example(
+            row,
+            args,
+            FakeTokenizer(),
+            DEFAULT_PROMPT_TEMPLATE,
+            {},
+            kb_by_url,
+        )

@@ -107,6 +107,7 @@ for RETRIEVAL_TOPK in "${K_ARRAY[@]}"; do
         --pruning-top-p "${EFFECTIVE_PRUNING_TOP_P}"   \
         --resume-from-jsonl \
         --write-on-batch-complete \
+        ${DISABLE_WEIGHTS_LOADING_TRACKING:+--disable-weights-loading-tracking}   \
         ${TAKE_N:+--take-n "${TAKE_N}"}   \
         ${ENSURE_GT:+--ensure-gt-passage-in-ensemble}   \
         ${DRY_RUN:+--dry-run --dry-run-no-images}

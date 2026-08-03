@@ -17,8 +17,13 @@ import torch
 
 from llamafactory.data.collator import MultiModalDataCollatorForSeq2Seq
 from llamafactory.extras.constants import IGNORE_INDEX
+from llamafactory.hparams import FinetuningArguments
 from llamafactory.train.beft.loss import compute_beft_loss, get_answer_token_logps
-from llamafactory.train.beft.trainer import compute_grouped_beft_loss
+from llamafactory.train.beft.trainer import (
+    _get_compact_logit_suffix,
+    _get_logits_to_keep_arg,
+    compute_grouped_beft_loss,
+)
 from llamafactory.train.beft.workflow import BeftDataCollator
 
 
@@ -117,6 +122,63 @@ def test_grouped_beft_prior_targets_follow_flattened_rows():
         expected_losses.append(beft_loss + prior_loss)
 
     assert torch.allclose(grouped_loss, torch.stack(expected_losses).mean())
+
+
+def test_compact_logits_are_disabled_by_default():
+    assert FinetuningArguments().beft_use_logits_to_keep is False
+
+
+def test_compact_logit_suffix_matches_full_loss_and_gradients():
+    torch.manual_seed(4)
+    labels = _labels([[3, 4], [3, 4], [6], [6]], seq_len=8)
+    batch_idx = torch.tensor([0, 0, 1, 1])
+    full_logits = torch.randn(4, 8, 7, requires_grad=True)
+    compact_source = full_logits.detach().clone().requires_grad_(True)
+
+    full_loss = compute_grouped_beft_loss(full_logits, labels, batch_idx=batch_idx)
+    logits_to_keep, compact_labels = _get_compact_logit_suffix(labels)
+    compact_logits = compact_source[:, -logits_to_keep:, :]
+    compact_loss = compute_grouped_beft_loss(compact_logits, compact_labels, batch_idx=batch_idx)
+
+    full_loss.backward()
+    compact_loss.backward()
+
+    assert logits_to_keep == 6
+    assert torch.allclose(compact_loss, full_loss)
+    assert torch.allclose(compact_source.grad, full_logits.grad)
+
+
+def test_compact_logit_suffix_rejects_rows_without_shifted_labels():
+    labels = _labels([[0], [3]], seq_len=6)
+
+    with pytest.raises(ValueError, match="after the first position"):
+        _get_compact_logit_suffix(labels)
+
+
+def test_logits_to_keep_detection_unwraps_model_wrappers():
+    class CompactModel(torch.nn.Module):
+        def forward(self, input_ids, logits_to_keep=0):
+            return input_ids
+
+    class LegacyCompactModel(torch.nn.Module):
+        def forward(self, input_ids, num_logits_to_keep=0):
+            return input_ids
+
+    class FullLogitsModel(torch.nn.Module):
+        def forward(self, input_ids):
+            return input_ids
+
+    class Wrapper(torch.nn.Module):
+        def __init__(self, model):
+            super().__init__()
+            self.model = model
+
+        def forward(self, *args, **kwargs):
+            return self.model(*args, **kwargs)
+
+    assert _get_logits_to_keep_arg(Wrapper(CompactModel())) == "logits_to_keep"
+    assert _get_logits_to_keep_arg(Wrapper(LegacyCompactModel())) == "num_logits_to_keep"
+    assert _get_logits_to_keep_arg(Wrapper(FullLogitsModel())) is None
 
 
 def test_beft_data_collator_flattens_instances_with_batch_idx(monkeypatch):

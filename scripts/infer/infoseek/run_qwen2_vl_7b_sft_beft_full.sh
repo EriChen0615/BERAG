@@ -34,7 +34,8 @@ export PRUNING_TOP_P=1.0
 unset TAKE_N ENSURE_GT
 
 echo "[InfoSeek Qwen2 full] Running BEFT with K=${K_VALUES}, offset=-5"
-RUN_MODE=beft K_VALUES="${K_VALUES}" \
+# RUN_MODE=beft K_VALUES="${K_VALUES}" \
+RUN_MODE=beft K_VALUES=50 \
     exec bash "${REPO_ROOT}/scripts/infer/infoseek/run_sft_beft.sh"
 
 echo "[InfoSeek Qwen2 full] Running SFT with K=${K_VALUES}"

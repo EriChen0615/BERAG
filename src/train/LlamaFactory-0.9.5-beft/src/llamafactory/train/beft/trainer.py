@@ -18,6 +18,7 @@
 import os
 import sys
 from collections import defaultdict
+from inspect import Parameter, signature
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -26,6 +27,7 @@ import torch.nn as nn
 from typing_extensions import override
 
 from ...extras import logging
+from ...extras.constants import IGNORE_INDEX
 from ..sft.trainer import CustomSeq2SeqTrainer
 from .loss import compute_beft_loss, get_answer_token_logps, get_hidden_state_before_first_label
 
@@ -37,6 +39,53 @@ if TYPE_CHECKING:
 
 
 logger = logging.get_logger(__name__)
+
+
+def _get_logits_to_keep_arg(model: "torch.nn.Module") -> str | None:
+    r"""Return the compact-logits argument supported by the wrapped model, if any."""
+    candidates = [model]
+    visited = set()
+    while candidates:
+        candidate = candidates.pop()
+        if candidate is None or id(candidate) in visited:
+            continue
+
+        visited.add(id(candidate))
+        try:
+            forward_parameters = signature(candidate.forward).parameters
+        except (TypeError, ValueError):
+            forward_parameters = {}
+
+        for arg_name in ("logits_to_keep", "num_logits_to_keep"):
+            parameter = forward_parameters.get(arg_name)
+            if parameter is not None and parameter.kind is not Parameter.VAR_KEYWORD:
+                return arg_name
+
+        for attribute in ("module", "base_model", "model"):
+            nested_model = getattr(candidate, attribute, None)
+            if isinstance(nested_model, torch.nn.Module):
+                candidates.append(nested_model)
+
+    return None
+
+
+def _get_compact_logit_suffix(
+    labels: "torch.Tensor",
+    label_pad_token_id: int = IGNORE_INDEX,
+) -> tuple[int, "torch.Tensor"]:
+    r"""Return the suffix length and aligned labels needed for causal answer-token logits."""
+    if labels.ndim != 2:
+        raise ValueError(f"labels must have shape [B, L], got {tuple(labels.shape)}.")
+    if labels.size(1) < 2:
+        raise ValueError("BEFT requires sequences with at least two tokens.")
+
+    shifted_label_mask = labels[:, 1:] != label_pad_token_id
+    if not torch.all(shifted_label_mask.any(dim=1)):
+        raise ValueError("Every BEFT passage row must contain a supervised answer token after the first position.")
+
+    first_predictor_position = int(torch.nonzero(shifted_label_mask, as_tuple=False)[:, 1].min().item())
+    logits_to_keep = labels.size(1) - first_predictor_position
+    return logits_to_keep, labels[:, first_predictor_position:]
 
 
 def _find_berag_src_root() -> Path | None:
@@ -151,6 +200,18 @@ class CustomSeq2SeqBEFTTrainer(CustomSeq2SeqTrainer):
         self._beft_metrics: dict[str, list[float]] = defaultdict(list)
         self.prior_loss_fn = nn.BCEWithLogitsLoss()
         self.prior_head = _build_prior_head(finetuning_args, _infer_hidden_size(self.model))
+        self._logits_to_keep_arg = None
+        if not finetuning_args.beft_use_logits_to_keep:
+            logger.info_rank0("BEFT compact suffix logits are disabled; using full-sequence logits.")
+        else:
+            self._logits_to_keep_arg = _get_logits_to_keep_arg(self.model)
+            if self._logits_to_keep_arg is None:
+                logger.warning_rank0("Model does not support compact suffix logits; using full-sequence logits.")
+            else:
+                logger.info_rank0(
+                    f"BEFT will request compact suffix logits with `{self._logits_to_keep_arg}`."
+                )
+
         if self.prior_head is not None:
             self._load_prior_head()
             self._move_prior_head_to_model_device()
@@ -274,13 +335,20 @@ class CustomSeq2SeqBEFTTrainer(CustomSeq2SeqTrainer):
     ):
         is_gt_passage = inputs.pop("is_gt_passage", None)
         batch_idx = inputs.pop("batch_idx", None)
-        labels = inputs["labels"]
+        labels = inputs.pop("labels")
         return_hidden_states = self.prior_head is not None
+        loss_labels = labels
+        model_kwargs = {}
+        if self._logits_to_keep_arg is not None:
+            logits_to_keep, loss_labels = _get_compact_logit_suffix(labels)
+            model_kwargs[self._logits_to_keep_arg] = logits_to_keep
+
         outputs = model(
             **inputs,
             return_dict=True,
             use_cache=False,
             output_hidden_states=return_hidden_states,
+            **model_kwargs,
         )
 
         prior_logits = None
@@ -294,7 +362,7 @@ class CustomSeq2SeqBEFTTrainer(CustomSeq2SeqTrainer):
 
         total_loss = compute_grouped_beft_loss(
             outputs.logits,
-            labels,
+            loss_labels,
             batch_idx=batch_idx,
             prior_logits=prior_logits,
             is_gt_passage=is_gt_passage,
