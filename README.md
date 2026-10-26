@@ -22,76 +22,120 @@ Install this repository's BEFT fork of LLaMA-Factory. Infoseek enables Unsloth; 
 
 ## 2. Prepare training data
 
-Training retrieval results are not yet published; reproduce retrieval using the upstream projects below. BERAG-demo downloads test data only. Replace `/absolute/path/...` with your artifacts and run preparation from `$BERAG_ROOT`.
+Download the published training inputs; no retrieval run is required:
 
-### Infoseek
+| Dataset | Training examples | Included resources |
+| --- | ---: | --- |
+| [E-VQA](https://huggingface.co/datasets/erichen-0615/EVQA-train-with-PreFLMR-L-retrieval) | 167,369 | PreFLMR-L Top-500, training images, passage corpus, retrieval index |
+| [InfoSeek](https://huggingface.co/datasets/erichen-0615/Infoseek-train64000-with-PreFLMR-L-retrieval) | 64,000 | PreFLMR-L Top-500, original fixed 64K subset |
 
-Follow [EchoSight](https://github.com/Go2Heart/EchoSight)'s data and retrieval instructions: use **EVA-CLIP-8B** against the **100K InfoSeek KB**, without its Q-Former reranker. Retrieve the top 100 documents for a 64K-example training sample (seed 42). Download the training CSV, KB, and OVEN images using the links in that repository.
+**Both training datasets use PreFLMR-L.** EchoSight EVA-CLIP-8B is used for InfoSeek evaluation. The released InfoSeek rankings require M2KR `Infoseek_passages/train_passages`, not EchoSight's 100K KB. InfoSeek images are available separately through [M2KR_Images](https://huggingface.co/datasets/BByrneLab/M2KR_Images); place the training images in one directory, retaining the filenames in `img_path`.
 
-The converter expects JSONL records with `question_id`, `ground_truth_url`, and `retrieved_pages`, whose entries contain `knowledge_base_index` and `score`. Preserve the KB ordering used to build the retrieval index; adapt upstream output to this format.
+### Download questions and passages
 
-```bash
-cd "$BERAG_ROOT"
-RETRIEVAL_JSONL=/absolute/path/infoseek_train_evaclip_top100.sample64000.seed42.jsonl \
-ECHOSIGHT_TRAIN_CSV=/absolute/path/infoseek_train_filtered.csv \
-ECHOSIGHT_KB_JSON=/absolute/path/wiki_100_dict_v4.json \
-IMG_BASEDIR=/absolute/path/infoseek_train_images \
-bash scripts/curate/infoseek/echosight_rag2_beft_data.sh
-```
-
-This creates pairs containing one gold document and one random hard negative from the top five retrieved documents. The output is:
-
-```text
-src/train/LlamaFactory-0.9.5-beft/data/jinghong_chen/infoseek/echosight-rag2-hardneg-beft-size=0-max=32768/train_sharegpt.json
-```
-
-### E-VQA
-
-Follow [PreFLMR](https://github.com/LinWeizheDragon/FLMR)'s environment, indexing, and retrieval instructions with **`LinWeizheDragon/PreFLMR_ViT-L`**, the **M2KR E-VQA training split and passages**, and `openai/clip-vit-large-patch14`. Download the E-VQA images through its dataset instructions.
-
-Save training questions with `retrieved_passage` entries (`passage_id`, `score`) using `Dataset.save_to_disk()`. Keep the original `pos_item_ids` gold labels. BERAG's retrieval settings are in `config/EVQA/Retrieval_PreFLMR-L-train.jsonnet` and `config/retrievers.libsonnet`; the curator downloads the M2KR passages automatically.
+Choose one dataset. The commands pin the published revisions, preserve row order, and save the local Arrow datasets expected by the curator.
 
 ```bash
 cd "$BERAG_ROOT"
-HF_DATASET_PATH=/absolute/path/EVQA-with-retrieval \
-IMG_BASEDIR=/absolute/path/EVQA/images \
-bash scripts/curate/evqa/beft_data.sh
+export TASK=infoseek  # or evqa
+
+python - <<'PY'
+import json
+import os
+from pathlib import Path
+from datasets import load_dataset
+from huggingface_hub import snapshot_download
+
+task = os.environ["TASK"]
+releases = {
+    "evqa": ("erichen-0615/EVQA-train-with-PreFLMR-L-retrieval", "9355b4d43b22ff4497e27f511382e53f00108235"),
+    "infoseek": ("erichen-0615/Infoseek-train64000-with-PreFLMR-L-retrieval", "ea1c465d4f5830e09f576347db154cf427973570"),
+}
+repo, revision = releases[task]
+root = Path(os.environ["BERAG_ROOT"])
+raw = root / "outputs/data" / task
+raw.mkdir(parents=True, exist_ok=True)
+load_dataset(repo, "default", split="train", revision=revision).save_to_disk(str(raw / "questions"))
+if task == "evqa":
+    passages = load_dataset(repo, "passages", split="train", revision=revision)
+    snapshot_download(repo, repo_type="dataset", revision=revision,
+                      allow_patterns=["images/*"], local_dir=str(raw))
+else:
+    passages = load_dataset(
+        "BByrneLab/multi_task_multi_modal_knowledge_retrieval_benchmark_M2KR",
+        "Infoseek_passages", split="train_passages",
+        revision="5d8cf441601d964ef1e7eb2c191d81f20323f6b0",
+    )
+passages.save_to_disk(str(raw / "passages"))
+
+# Register generated BEFT data separately from the existing EchoSight recipe.
+data_dir = root / "outputs/data/beft"
+data_dir.mkdir(parents=True, exist_ok=True)
+registry = data_dir / "dataset_info.json"
+info = json.loads(registry.read_text()) if registry.exists() else {}
+source = json.loads((Path(os.environ["TRAIN_DIR"]) / "data/dataset_info.json").read_text())
+entry = source["evqa_beft_k2_prior"].copy()
+entry["file_name"] = f"{task}/train_sharegpt.json"
+info[f"{task}_beft_preflmr"] = entry
+registry.write_text(json.dumps(info, indent=2) + "\n")
+PY
 ```
 
-This keeps two documents per example, ensuring that a gold document is present. It uses all training examples before filtering and writes:
+### Build BEFT examples
 
-```text
-src/train/LlamaFactory-0.9.5-beft/data/jinghong_chen/evqa/beft_K=2-size=0-max=2048/train_sharegpt.json
+```bash
+if [ "$TASK" = evqa ]; then
+  for archive in "$BERAG_ROOT"/outputs/data/evqa/images/evqa_train_images-*.tar; do
+    tar -xf "$archive" -C "$BERAG_ROOT/outputs/data/evqa"
+  done
+  export IMG_BASEDIR="$BERAG_ROOT/outputs/data/evqa/images"
+  MAX_TOKENS=2048
+else
+  export IMG_BASEDIR=/absolute/path/to/infoseek_train_images
+  MAX_TOKENS=32768
+fi
+
+python src/curate/ragk_answer_ppl.py \
+  --hf_dataset_path "$BERAG_ROOT/outputs/data/$TASK/questions" \
+  --passage_set_name "$BERAG_ROOT/outputs/data/$TASK/passages" \
+  --mode sft --output_style beft --topk_docs 2 \
+  --ensure_gt_passage_in_topk --sample_size 0 --seed 42 \
+  --img_basedir "$IMG_BASEDIR" \
+  --output_dir "$BERAG_ROOT/outputs/data/beft/$TASK" \
+  --drop_max_tokens "$MAX_TOKENS"
 ```
 
-Both outputs are already registered in LLaMA-Factory's `data/dataset_info.json`. Image paths in the generated JSON must point to existing files.
+This selects the top two passages, inserting a gold passage if absent, then filters long examples. It uses the published questions without resampling; image paths must resolve to existing files. Output: `outputs/data/beft/$TASK/train_sharegpt.json`.
+
+To rerun retrieval, follow [PreFLMR](https://github.com/LinWeizheDragon/FLMR) with [`PreFLMR_ViT-L`](https://huggingface.co/LinWeizheDragon/PreFLMR_ViT-L), `openai/clip-vit-large-patch14`, and the matching M2KR training corpus. E-VQA's released index is optional when using cached rankings; see the dataset cards for index and checksum details.
 
 ## 3. Run BEFT training
 
-Set `TASK` to the dataset prepared above:
+Keep `TASK` set to the dataset prepared above:
 
 ```bash
-export TASK=infoseek  # or evqa
 cd "$TRAIN_DIR"
 
 CUDA_VISIBLE_DEVICES=0 llamafactory-cli train \
   "my_configs/$TASK/qwen3-vl-8B/beft/beft_k2_prior_mlp.yaml" \
+  dataset="${TASK}_beft_preflmr" \
+  dataset_dir="$BERAG_ROOT/outputs/data/beft" \
   media_dir="$BERAG_ROOT" \
-  tokenized_path="$BERAG_ROOT/outputs/tokenized/$TASK-qwen3-vl-8b-beft" \
-  output_dir="$BERAG_ROOT/outputs/train/$TASK-qwen3-vl-8b-beft" \
+  tokenized_path="$BERAG_ROOT/outputs/tokenized/$TASK-qwen3-vl-8b-beft-preflmr" \
+  output_dir="$BERAG_ROOT/outputs/train/$TASK-qwen3-vl-8b-beft-preflmr" \
   report_to=none
 ```
 
 The checked-in recipes use one epoch, effective batch size 8, LoRA rank 64 / alpha 128, learning rate `1e-5`, and prior-head learning rate `1e-6`. The prior head has two layers, projection size 1024, and hidden-state offset 4. No separate SFT warm-up is required.
 
-The command overrides machine-specific paths in the YAML. Use a new `tokenized_path` after changing the dataset or tokenization settings. Checkpoints are written under `outputs/train/$TASK-qwen3-vl-8b-beft/`.
+The command overrides machine-specific paths and dataset registration in the YAML, including InfoSeek's existing EchoSight dataset default. Use a new `tokenized_path` after changing the dataset or tokenization settings. Checkpoints are written under `outputs/train/$TASK-qwen3-vl-8b-beft-preflmr/`.
 
 ## 4. Export for inference
 
 Use the final training output, or set `ADAPTER_DIR` to a specific `checkpoint-*` directory:
 
 ```bash
-export ADAPTER_DIR="$BERAG_ROOT/outputs/train/$TASK-qwen3-vl-8b-beft"
+export ADAPTER_DIR="$BERAG_ROOT/outputs/train/$TASK-qwen3-vl-8b-beft-preflmr"
 export EXPORT_DIR="$BERAG_ROOT/outputs/models/Qwen3-VL-8B-Instruct-BEFT-$TASK"
 
 llamafactory-cli export \
@@ -110,6 +154,6 @@ Keep `prior_head.pt` alongside the merged model weights. For BERAG inference, us
 
 ## TODO
 
-- [ ] Publish the E-VQA and Infoseek training retrieval results and prepared BEFT datasets.
-- [ ] Release retrieval-to-training export scripts, including the Infoseek 64K sample IDs.
-- [ ] Publish a pinned training environment and training-image download instructions.
+- [x] Publish E-VQA and InfoSeek PreFLMR-L Top-500 training retrieval, preserving the original InfoSeek 64K subset.
+- [x] Publish E-VQA training images, passage corpus, and retrieval index.
+- [ ] Publish prepared, model-specific BEFT datasets and a pinned training environment.
